@@ -1,3 +1,4 @@
+import { fileURLToPath, URL } from "node:url";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 
@@ -15,6 +16,9 @@ function siteUrl(): Plugin {
 // ლოკალურად /api/* მიდის Python სერვერზე (npm run api), Vercel-ზე — api/*.py ფუნქციებზე.
 export default defineConfig({
   plugins: [react(), siteUrl()],
+  resolve: {
+    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
+  },
   server: {
     proxy: { "/api": "http://127.0.0.1:3001" },
   },

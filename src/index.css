@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* shadcn/ui — zinc, მუქი თემა (შავი ფონი) + ლიგის ფერები */
+@layer base {
+  :root {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
+    --card: 240 8% 6%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 8% 6%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 14%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+    --radius: 0.75rem;
+    --win: 142 70% 45%;
+    --loss: 0 84% 62%;
+    --gold: 43 96% 56%;
+    --red: 0 84% 60%;
+    --blue: 217 91% 60%;
+    color-scheme: dark;
+  }
+
+  * {
+    @apply border-border;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* ბარათი ფერადი აქცენტით: --tone = HSL ფერი (მაგ. var(--gold)) */
+  .tone-card {
+    position: relative;
+    overflow: hidden;
+    border-color: hsl(var(--tone) / 0.28);
+    background:
+      radial-gradient(120% 90% at 100% 0%, hsl(var(--tone) / 0.13), transparent 60%),
+      linear-gradient(180deg, hsl(var(--card) / 0.92), hsl(var(--card) / 0.86));
+    backdrop-filter: blur(6px);
+  }
+  .tone-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, hsl(var(--tone) / 0.7), transparent);
+  }
+  .lift {
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  @media (hover: hover) {
+    .lift:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 18px 40px -18px hsl(var(--tone, 0 0% 0%) / 0.55);
+    }
+  }
+}
