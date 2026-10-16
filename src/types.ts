@@ -7,11 +7,19 @@ export interface Standing {
   pf: number;
 }
 
+export interface DraftInfo {
+  /** დრაფტის დაწყება, ms (UTC) */
+  date: number | null;
+  type: string | null;
+  pick_seconds: number | null;
+}
+
 export interface CurrentSeason {
   label: string;
   week: number;
   drafted: boolean;
   standings: Standing[];
+  draft: DraftInfo | null;
 }
 
 export interface Champion {
@@ -68,7 +76,7 @@ export interface TeamValue {
 }
 
 export interface Awards {
-  mvp: { player: string; total: number; avg: number } | null;
+  mvp: { player: string; total: number; avg: number; pid: number } | null;
   pf: TeamValue;
   pa: TeamValue;
   acq: TeamValue;
@@ -100,6 +108,7 @@ export interface PowerRow {
 
 export interface DraftPick {
   player: string;
+  pid: number;
   n: number;
   rank: number;
   total: number;
@@ -133,4 +142,25 @@ export interface LeagueData {
   records: RecordItem[];
   seasons: Season[];
   h2h: { teams: string[]; cells: [number, number][][] };
+  /** გუნდის სახელი → ლოგოს URL */
+  logos: Record<string, string>;
+  /** გუნდის სახელი → NBA გუნდის კოდი (fans.json) */
+  fans: Record<string, string>;
+  managers: Manager[];
+}
+
+export interface Manager {
+  team: string;
+  abbrev: string;
+  logo: string | null;
+  fan: string | null;
+  rookie: boolean;
+  ovr: number | null;
+  w: number;
+  l: number;
+  titles: number;
+  best_week: number;
+  ppg: number;
+  playoffs: number;
+  seasons: { season: string; team: string; rec: string; champ: boolean }[];
 }

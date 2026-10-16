@@ -1,0 +1,11 @@
+{
+  "_comment": "ESPN-ის გუნდის ID → NBA გუნდი, რომელსაც მენეჯერი გულშემატკივრობს. კოდები: atl bos bkn cha chi cle dal den det gs hou ind lac lal mem mia mil min no ny okc orl phi phx por sac sa tor utah wsh",
+  "1": { "nba": "dal", "team": "Mavs_Texas" },
+  "2": { "nba": "atl", "team": "genes" },
+  "3": { "nba": "okc", "team": "Why Not Seattle" },
+  "5": { "nba": "gs", "team": "Golden Dynasty" },
+  "6": { "nba": "bos", "team": "Boston Tchko" },
+  "8": { "nba": "wsh", "team": "AD Glazer" },
+  "9": { "nba": "gs", "team": "Sandro's drunk Team" },
+  "10": { "nba": "sac", "team": "Rookie" }
+}

@@ -1,14 +1,18 @@
 import type { DraftPick, DraftReview as Review } from "../../types";
 import { clean, fmt } from "../../lib/format";
 import { Mono, Team } from "../Mono";
+import PlayerPhoto from "../PlayerPhoto";
 
 function PickCard({ x, up }: { x: DraftPick; up: boolean }) {
   return (
     <div className="glass dl">
-      <div>
-        <b>{x.player}</b>
-        <div className="meta">
-          {clean(x.team)} · {fmt(x.total)} FP
+      <div className="player">
+        <PlayerPhoto pid={x.pid} size={52} />
+        <div>
+          <b>{x.player}</b>
+          <div className="meta">
+            {clean(x.team)} · {fmt(x.total)} FP
+          </div>
         </div>
       </div>
       <div className={`mv ${up ? "up" : "down"}`}>
@@ -64,7 +68,10 @@ export default function DraftReview({ draft }: { draft: Review }) {
                       {x.n}
                     </td>
                     <td>
-                      <b>{x.player}</b>
+                      <div className="player">
+                        <PlayerPhoto pid={x.pid} size={40} />
+                        <b>{x.player}</b>
+                      </div>
                     </td>
                     <td>
                       <Team name={x.team} />

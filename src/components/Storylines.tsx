@@ -1,10 +1,13 @@
 import type { LeagueData } from "../types";
 import { clean, fmt, signedPct } from "../lib/format";
+import CountUp from "./CountUp";
+import { Mono } from "./Mono";
+import PlayerPhoto from "./PlayerPhoto";
 import Section from "./Section";
 
 function Trophy() {
   return (
-    <svg viewBox="0 0 200 200" aria-hidden="true">
+    <svg className="trophy" viewBox="0 0 200 200" aria-hidden="true">
       <defs>
         <linearGradient id="tg" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="#ffe08a" />
@@ -30,6 +33,7 @@ export default function Storylines({ data }: { data: LeagueData }) {
   const high = data.records.find((r) => r.k.includes("მაღალი"));
   const steal = last?.draft?.steals[0];
   const lucky = last?.luck[0];
+  const mvp = last?.awards.mvp;
 
   return (
     <Section id="story" title="Storylines" sub="რაც უნდა იცოდე ახალ სეზონამდე">
@@ -37,6 +41,7 @@ export default function Storylines({ data }: { data: LeagueData }) {
         {champ && (
           <div className="glass tile champ">
             <Trophy />
+            <Mono name={champ.team} size={64} />
             <div className="lbl">Defending champion · {champ.season}</div>
             <div className="nm">{clean(champ.team)}</div>
             <div className="sub">
@@ -45,26 +50,29 @@ export default function Storylines({ data }: { data: LeagueData }) {
             </div>
           </div>
         )}
-        {last?.awards.mvp && (
-          <div className="glass tile red">
+        {mvp && (
+          <div className="glass tile red has-photo">
+            <PlayerPhoto pid={mvp.pid} size={150} className="tile-photo" />
             <div className="lbl">Season MVP</div>
-            <div className="nm">{last.awards.mvp.player}</div>
-            <div className="big num">{fmt(last.awards.mvp.total)}</div>
-            <div className="sub">FP სეზონში · {last.awards.mvp.avg}/თამაში</div>
+            <div className="nm">{mvp.player}</div>
+            <CountUp className="big num" value={fmt(mvp.total)} />
+            <div className="sub">FP სეზონში · {mvp.avg}/თამაში</div>
           </div>
         )}
         {high && (
           <div className="glass tile blue">
             <div className="lbl">Record week</div>
-            <div className="big num">{high.v}</div>
-            <div className="nm" style={{ fontSize: 24 }}>
+            <CountUp className="big num" value={high.v} />
+            <div className="nm with-logo" style={{ fontSize: 24 }}>
+              <Mono name={high.who} size={28} />
               {clean(high.who)}
             </div>
             <div className="sub">{high.when}</div>
           </div>
         )}
         {steal && (
-          <div className="glass tile green">
+          <div className="glass tile green has-photo">
+            <PlayerPhoto pid={steal.pid} size={150} className="tile-photo" />
             <div className="lbl">Steal of the draft</div>
             <div className="nm">{steal.player}</div>
             <div className="big num">
@@ -78,10 +86,11 @@ export default function Storylines({ data }: { data: LeagueData }) {
         {lucky && (
           <div className="glass tile">
             <div className="lbl">Luckiest manager</div>
-            <div className="nm">{clean(lucky.name)}</div>
-            <div className="big num" style={{ color: "var(--gold)" }}>
-              {signedPct(lucky.luck)}
+            <div className="nm with-logo">
+              <Mono name={lucky.name} size={28} />
+              {clean(lucky.name)}
             </div>
+            <CountUp className="big num" style={{ color: "var(--gold)" }} value={signedPct(lucky.luck)} />
             <div className="sub">რეალური მოგება % მინუს all-play %</div>
           </div>
         )}

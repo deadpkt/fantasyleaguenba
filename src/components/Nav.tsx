@@ -1,5 +1,6 @@
 const LINKS: [string, string][] = [
   ["story", "მთავარი"],
+  ["managers", "მენეჯერები"],
   ["champions", "ჩემპიონები"],
   ["now", "ეს სეზონი"],
   ["alltime", "All-Time"],

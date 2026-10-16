@@ -15,6 +15,7 @@ if os.path.exists(env):
 
 sys.path.insert(0, os.path.join(HERE, "api"))
 import data  # noqa: E402
+import logo  # noqa: E402
 
 
 class Dev(SimpleHTTPRequestHandler):
@@ -24,6 +25,8 @@ class Dev(SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith("/api/data"):
             return data.handler.do_GET(self)
+        if self.path.startswith("/api/logo"):
+            return logo.handler.do_GET(self)
         return super().do_GET()
 
 

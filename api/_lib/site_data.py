@@ -2,10 +2,23 @@
 """ლიგის ვებსაიტისთვის მონაცემების აწყობა (JSON). გამოყენება: python site_data.py out.json"""
 import datetime
 import json
+import os
 import sys
 
 import espn_feed as ef
 import history as H
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def _draft_info(league):
+    """დრაფტის თარიღი (ms, UTC), ტიპი და პიკის დრო ESPN-ის პარამეტრებიდან."""
+    try:
+        raw = league.espn_request.league_get(params={"view": ["mSettings"]})
+        ds = raw.get("settings", {}).get("draftSettings", {}) or {}
+        return {"date": ds.get("date"), "type": ds.get("type"), "pick_seconds": ds.get("timePerSelection")}
+    except Exception:
+        return None
 
 
 def build():
@@ -21,6 +34,7 @@ def build():
         "label": H.season_label(cur_y), "week": league.currentMatchupPeriod, "drafted": ef.is_drafted(league),
         "standings": [{"name": t.team_name.strip(), "w": t.wins, "l": t.losses, "pf": round(t.points_for)}
                       for t in sorted(league.teams, key=lambda t: (t.standing or 99, -t.wins))],
+        "draft": _draft_info(league),
     }
 
     # ჩემპიონები
@@ -96,7 +110,7 @@ def build():
             "standings": [{"name": t["name"].strip(), "w": t["w"], "l": t["l"], "pf": round(t["pf"]), "pa": round(t["pa"]),
                            "final": t["final"], "seed": t["seed"], "acq": t["acq"], "trades": t["trades"]} for t in rp["order"]],
             "awards": {
-                "mvp": {"player": a["mvp"]["player"], "total": a["mvp"]["total"], "avg": a["mvp"]["avg"]} if a["mvp"] else None,
+                "mvp": {"player": a["mvp"]["player"], "total": a["mvp"]["total"], "avg": a["mvp"]["avg"], "pid": a["mvp"]["pid"]} if a["mvp"] else None,
                 "pf": {"team": a["pf"]["name"].strip(), "v": round(a["pf"]["pf"])},
                 "pa": {"team": a["pa"]["name"].strip(), "v": round(a["pa"]["pa"])},
                 "acq": {"team": a["acq"]["name"].strip(), "v": a["acq"]["acq"]},
@@ -109,12 +123,12 @@ def build():
                       "luck": round(x["luck"], 3)} for x in H.luck(s)],
             "power": [{"name": x["name"].strip(), "score": x["score"], "rec": x["rec"], "ppg": round(x["ppg"])} for x in H.power(s)],
             "draft": {
-                "steals": [{"player": x["player"], "n": x["n"], "rank": x["rank"], "total": round(x["total"]),
+                "steals": [{"player": x["player"], "pid": x["pid"], "n": x["n"], "rank": x["rank"], "total": round(x["total"]),
                             "team": s["teams"].get(str(x["team"]), {}).get("name", "?").strip()} for x in dr["steals"]],
-                "busts": [{"player": x["player"], "n": x["n"], "rank": x["rank"], "total": round(x["total"]),
+                "busts": [{"player": x["player"], "pid": x["pid"], "n": x["n"], "rank": x["rank"], "total": round(x["total"]),
                            "team": s["teams"].get(str(x["team"]), {}).get("name", "?").strip()} for x in dr["busts"]],
                 "grades": [{"team": g["name"].strip(), "grade": g["grade"], "best": g["best"]["player"]} for g in dr["grades"]],
-                "round1": [{"n": x["n"], "player": x["player"], "rank": x["rank"], "total": round(x["total"]),
+                "round1": [{"n": x["n"], "player": x["player"], "pid": x["pid"], "rank": x["rank"], "total": round(x["total"]),
                             "team": s["teams"].get(str(x["team"]), {}).get("name", "?").strip()}
                            for x in (s.get("draft") or []) if x["round"] == 1],
             } if dr else None,
@@ -134,9 +148,67 @@ def build():
                 h2h[l][w][1] += 1
     matrix = {"teams": [nm(o) for o in owners], "cells": [[h2h[o][p] for p in owners] for o in owners]}
 
+    # გუნდების ლოგოები (სახელი -> URL): ყველა სეზონიდან, ახლანდელი ბოლოს (უპირატესობით)
+    logos = {}
+    for y in sorted(S):
+        for t in S[y]["teams"].values():
+            if t.get("logo"):
+                logos[" ".join(t["name"].split())] = t["logo"]
+    for t in league.teams:
+        if t.logo_url:
+            logos[" ".join(t.team_name.split())] = t.logo_url
+    # ძველი სახელით ცნობილ მენეჯერს (all-time / H2H) ახლანდელი ლოგო
+    for o, info in names.items():
+        cur_logo = next((t.logo_url for t in league.teams if t.team_id == info["tid"] and t.logo_url), None)
+        if cur_logo:
+            logos.setdefault(" ".join(info["name"].split()), cur_logo)
+
+    # გულშემატკივრობა (fans.json: ESPN team_id -> NBA გუნდი) — ყველა სახელზე, რაც ამ გუნდს ოდესმე ჰქონია
+    fan_by_tid = _fans()
+    fans = {}
+    for y in sorted(S):
+        for tid, t in S[y]["teams"].items():
+            if tid in fan_by_tid:
+                fans[" ".join(t["name"].split())] = fan_by_tid[tid]
+    for t in league.teams:
+        if str(t.team_id) in fan_by_tid:
+            fans[" ".join(t.team_name.split())] = fan_by_tid[str(t.team_id)]
+    for o, info in names.items():
+        if str(info["tid"]) in fan_by_tid:
+            fans.setdefault(" ".join(info["name"].split()), fan_by_tid[str(info["tid"])])
+
+    # მენეჯერების პროფილები (ახლანდელი გუნდები + კარიერა)
+    at_by_owner = dict(H.alltime(S))
+    managers = []
+    for t in sorted(league.teams, key=lambda t: t.team_id):
+        owner = next((o for o, info in names.items() if info["tid"] == t.team_id), None)
+        r = at_by_owner.get(owner) if owner else None
+        c = (H.career(S, owner) or {}) if owner else {}
+        played = bool(r and r["w"] + r["l"] + r["t"] > 0)
+        managers.append({
+            "team": " ".join(t.team_name.split()), "abbrev": t.team_abbrev, "logo": t.logo_url or None,
+            "fan": fan_by_tid.get(str(t.team_id)),
+            "rookie": not played,
+            "ovr": c.get("ovr") if played else None,
+            "w": r["w"] if played else 0, "l": r["l"] if played else 0,
+            "titles": r["titles"] if played else 0, "best_week": round(r["best_week"]) if played else 0,
+            "ppg": round(r["ppg"]) if played else 0, "playoffs": r["playoffs"] if played else 0,
+            "seasons": [{"season": h["season"] if "season" in h else H.season_label(h["year"]), "team": h["name"].strip(),
+                         "rec": h["rec"], "champ": h["final"] == 1 and h["complete"]} for h in c.get("history", [])],
+        })
+
     return {"league": league.settings.name.strip(), "updated": datetime.date.today().isoformat(),
             "current": cur, "champions": champs, "alltime": alltime, "records": records,
-            "seasons": seasons, "h2h": matrix}
+            "seasons": seasons, "h2h": matrix, "logos": logos, "fans": fans, "managers": managers}
+
+
+def _fans():
+    try:
+        with open(os.path.join(HERE, "fans.json"), encoding="utf-8") as f:
+            raw = json.load(f)
+        return {k: v["nba"] for k, v in raw.items() if not k.startswith("_") and isinstance(v, dict) and v.get("nba")}
+    except (OSError, ValueError):
+        return {}
 
 
 if __name__ == "__main__":
