@@ -147,6 +147,8 @@ export interface LeagueData {
   /** გუნდის სახელი → NBA გუნდის კოდი (fans.json) */
   fans: Record<string, string>;
   managers: Manager[];
+  settings: LeagueSettings | null;
+  trades?: Trades;
 }
 
 export interface Manager {
@@ -163,4 +165,113 @@ export interface Manager {
   ppg: number;
   playoffs: number;
   seasons: { season: string; team: string; rec: string; champ: boolean }[];
+}
+
+export interface LeagueSettings {
+  scoring_type: string | null;
+  scoring: { abbr: string; label: string; points: number }[];
+  examples: { label: string; points: number }[];
+  roster: { slot: string; count: number }[];
+  teams: number;
+  regular_season_weeks: number | null;
+  playoff_teams: number | null;
+  playoff_round_weeks: number | null;
+  trade_deadline: number | null;
+  veto_votes: number | null;
+  waiver_hours: number | null;
+  acquisition_limit: number | null;
+  acquisition_type: string | null;
+  draft_type: string | null;
+  pick_seconds: number | null;
+}
+
+export interface Announcement {
+  reactions?: Record<string, number>;
+  id?: string;
+  created?: string;
+  date?: string;
+  title: string;
+  text?: string;
+  pinned?: boolean;
+  auto?: boolean;
+}
+
+export interface NbaArticle {
+  headline: string;
+  description?: string;
+  published?: string;
+  image?: string | null;
+  link?: string | null;
+}
+
+export interface PlayerNews {
+  pid: number;
+  player?: string | null;
+  owner?: string | null;
+  headline: string;
+  story?: string;
+  published?: string;
+  source?: string;
+}
+
+export interface Injury {
+  player: string;
+  pid: number | null;
+  team: string;
+  status: string;
+  comment?: string;
+  date?: string;
+  owner?: string | null;
+}
+
+export interface NewsData {
+  updated: string;
+  announcements: Announcement[];
+  nba: NbaArticle[];
+  fantasy: PlayerNews[];
+  injuries: Injury[];
+}
+
+export interface LivePlayer {
+  name: string;
+  pid: number;
+  slot: string;
+  pro: string;
+  opp: string | null;
+  points: number;
+  played: boolean;
+  injury: string | null;
+}
+
+export interface LiveTeam {
+  name: string;
+  score: number;
+  projected: number | null;
+  starters: LivePlayer[];
+  bench: LivePlayer[];
+}
+
+export interface LiveData {
+  period: number;
+  is_points: boolean;
+  drafted: boolean;
+  updated: string;
+  matchups: { home: LiveTeam; away: LiveTeam }[];
+}
+
+export interface TradeSide {
+  team: string;
+  to: string | null;
+  gives: { name: string; pid: number | null }[];
+}
+
+export interface Trades {
+  current: { date: string; sides: TradeSide[] }[];
+  past: { season: string; total: number; teams: { team: string; trades: number }[] }[];
+}
+
+export interface AnnouncementsData {
+  items: Announcement[];
+  writable: boolean;
+  admin: boolean;
 }

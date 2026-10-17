@@ -8,6 +8,15 @@
     },
     "api/logo.py": {
       "maxDuration": 15
+    },
+    "api/news.py": {
+      "maxDuration": 60
+    },
+    "api/live.py": {
+      "maxDuration": 30
+    },
+    "api/announcements.py": {
+      "maxDuration": 30
     }
   },
   "rewrites": [

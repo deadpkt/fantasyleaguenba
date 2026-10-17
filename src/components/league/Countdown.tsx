@@ -58,7 +58,11 @@ export default function Countdown({ draft, drafted }: { draft: DraftInfo | null;
           <div className="grid grid-cols-4 gap-2" role="timer" aria-label="დრაფტამდე დარჩენილი დრო">
             {cells.map(([v, l]) => (
               <div key={l} className="rounded-lg border border-white/10 bg-black/40 px-2 py-3 text-center">
-                <div className="bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-3xl font-bold tabular text-transparent sm:text-4xl">{v}</div>
+                <div className="overflow-hidden text-3xl font-bold tabular sm:text-4xl">
+                  <span key={v} className="digit-in bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-transparent">
+                    {v}
+                  </span>
+                </div>
                 <div className="mt-0.5 text-[11px] text-muted-foreground">{l}</div>
               </div>
             ))}

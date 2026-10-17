@@ -5,3 +5,4 @@ __pycache__/
 *.pyc
 .vercel
 *.tsbuildinfo
+api/_lib/*.local.json

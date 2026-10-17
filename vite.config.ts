@@ -20,6 +20,6 @@ export default defineConfig({
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },
   server: {
-    proxy: { "/api": "http://127.0.0.1:3001" },
+    proxy: { "/api": `http://127.0.0.1:${process.env.API_PORT || 3001}` },
   },
 });

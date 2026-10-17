@@ -4,8 +4,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "dev": "node dev.mjs",
     "start": "node dev.mjs",
-    "dev": "vite",
+    "dev:site": "vite",
     "api": "python dev_server.py",
     "build": "tsc -b && vite build",
     "preview": "vite preview"

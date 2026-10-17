@@ -7,6 +7,8 @@ import sys
 
 import espn_feed as ef
 import history as H
+import league_settings
+import trades as trades_mod
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -199,7 +201,16 @@ def build():
 
     return {"league": league.settings.name.strip(), "updated": datetime.date.today().isoformat(),
             "current": cur, "champions": champs, "alltime": alltime, "records": records,
-            "seasons": seasons, "h2h": matrix, "logos": logos, "fans": fans, "managers": managers}
+            "seasons": seasons, "h2h": matrix, "logos": logos, "fans": fans, "managers": managers,
+            "settings": _settings(league),
+            "trades": {"current": trades_mod.current(league), "past": trades_mod.past(S, H.season_label)}}
+
+
+def _settings(league):
+    try:
+        return league_settings.build(league)
+    except Exception:
+        return None
 
 
 def _fans():

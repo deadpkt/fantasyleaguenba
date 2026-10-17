@@ -5,6 +5,8 @@ import { LeagueProvider } from "@/lib/league";
 import { Skeleton } from "@/components/ui/skeleton";
 import SiteHeader from "@/components/layout/SiteHeader";
 import Footer from "@/components/layout/Footer";
+import Backdrop from "@/components/layout/Backdrop";
+import SiteFx, { PageTransition } from "@/components/layout/SiteFx";
 import Home from "@/pages/Home";
 import Managers from "@/pages/Managers";
 import Standings from "@/pages/Standings";
@@ -12,6 +14,11 @@ import History from "@/pages/History";
 import Records from "@/pages/Records";
 import Seasons from "@/pages/Seasons";
 import HeadToHead from "@/pages/HeadToHead";
+import Rules from "@/pages/Rules";
+import News from "@/pages/News";
+import Live from "@/pages/Live";
+import Trades from "@/pages/Trades";
+import Announcements from "@/pages/Announcements";
 
 /** გვერდის შეცვლისას თავში ავდივართ */
 function ScrollTop() {
@@ -51,6 +58,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <ScrollTop />
+      <Backdrop />
+      <SiteFx />
       {state.status !== "ready" ? (
         <>
           <SiteHeader league="wolt channel" season="" />
@@ -60,6 +69,7 @@ export default function App() {
         <LeagueProvider data={state.data}>
           <SiteHeader league={state.data.league} season={state.data.current.label} />
           <main className="container relative z-10 min-h-[60vh]">
+            <PageTransition>
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/managers" element={<Managers />} />
@@ -68,8 +78,14 @@ export default function App() {
               <Route path="/records" element={<Records />} />
               <Route path="/seasons" element={<Seasons />} />
               <Route path="/h2h" element={<HeadToHead />} />
+              <Route path="/news" element={<News />} />
+              <Route path="/rules" element={<Rules />} />
+              <Route path="/live" element={<Live />} />
+              <Route path="/trades" element={<Trades />} />
+              <Route path="/announcements" element={<Announcements />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            </PageTransition>
           </main>
           <Footer league={state.data.league} updated={state.data.updated} />
         </LeagueProvider>
