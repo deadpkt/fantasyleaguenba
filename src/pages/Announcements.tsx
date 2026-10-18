@@ -115,9 +115,9 @@ export default function Announcements() {
         <div className="flex items-center justify-between gap-3 p-5 sm:p-6">
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-              <Ball className="h-3.5 w-3.5" /> Commissioner's Desk
+              <Ball className="h-3.5 w-3.5" /> კომისარი
             </div>
-            <div className="text-xl font-semibold tracking-tight sm:text-2xl">კომისრის ტრიბუნა</div>
+            <div className="text-xl font-semibold tracking-tight sm:text-2xl">ლიგის განცხადებები</div>
             {data && (
               <div className="flex gap-5 pt-1 font-mono text-sm">
                 <span>
@@ -177,7 +177,7 @@ export default function Announcements() {
               <Ball className="h-4 w-4" /> ახალი განცხადება
             </CardTitle>
             {data && !data.writable && (
-              <CardDescription className="text-loss">შენახვა ჯერ არ არის ჩართული — Vercel-ში Upstash Redis უნდა დაუკავშირო (იხ. README).</CardDescription>
+              <CardDescription className="text-loss">შენახვა ჯერ არ მუშაობს. Vercel-ში Upstash Redis უნდა დაუკავშირო (იხ. README).</CardDescription>
             )}
           </CardHeader>
           <CardContent>

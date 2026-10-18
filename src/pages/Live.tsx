@@ -4,6 +4,7 @@ import type { LiveData, LivePlayer, LiveTeam } from "@/types";
 import { useApi } from "@/lib/useApi";
 import { clean } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { winProb } from "@/lib/season";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -53,8 +54,7 @@ function Lineup({ t }: { t: LiveTeam }) {
 
 function Matchup({ away, home, isPoints }: { away: LiveTeam; home: LiveTeam; isPoints: boolean }) {
   const [open, setOpen] = useState(false);
-  const total = away.score + home.score;
-  const awayPct = total > 0 ? (away.score / total) * 100 : 50;
+  const awayWin = winProb(away, home);
   const lead = away.score === home.score ? null : away.score > home.score ? "away" : "home";
 
   const Side = ({ t, side }: { t: LiveTeam; side: "away" | "home" }) => (
@@ -80,10 +80,18 @@ function Matchup({ away, home, isPoints }: { away: LiveTeam; home: LiveTeam; isP
           <Side t={home} side="home" />
         </div>
 
-        {/* ვინ უსწრებს */}
-        <div className="flex h-1.5 overflow-hidden rounded-full bg-white/10">
-          <div className="bg-[hsl(var(--red))] transition-all duration-700" style={{ width: `${awayPct}%` }} />
-          <div className="flex-1 bg-[hsl(var(--blue))]" />
+        {/* მოგების შანსი */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs tabular">
+            <span className={cn("font-semibold", awayWin >= 0.5 ? "text-[hsl(var(--red))]" : "text-muted-foreground")}>{Math.round(awayWin * 100)}%</span>
+            <span className="text-[11px] uppercase tracking-wider text-muted-foreground">მოგების შანსი</span>
+            <span className={cn("font-semibold", awayWin < 0.5 ? "text-[hsl(var(--blue))]" : "text-muted-foreground")}>{Math.round((1 - awayWin) * 100)}%</span>
+          </div>
+          <div className="flex h-2 overflow-hidden rounded-full bg-white/10">
+            <div className="bg-gradient-to-r from-[hsl(var(--red))] to-[hsl(var(--red))]/70 transition-all duration-700" style={{ width: `${awayWin * 100}%` }} />
+            <div className="w-0.5 bg-black" />
+            <div className="flex-1 bg-gradient-to-l from-[hsl(var(--blue))] to-[hsl(var(--blue))]/70" />
+          </div>
         </div>
 
         <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={() => setOpen(!open)}>
@@ -138,7 +146,7 @@ export default function Live() {
         <>
           {!state.data.drafted && (
             <p className="mb-4 rounded-lg border border-dashed border-white/15 p-3 text-sm text-muted-foreground">
-              დრაფტი ჯერ არ ჩატარებულა — ქვემოთ პირველი კვირის მატჩაფებია. სეზონის დაწყების შემდეგ აქ ლაივ ანგარიში იქნება.
+              დრაფტი ჯერ არ ჩატარებულა. ქვემოთ პირველი კვირის მატჩაფებია. სეზონის დაწყების შემდეგ აქ ლაივ ანგარიში იქნება.
             </p>
           )}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

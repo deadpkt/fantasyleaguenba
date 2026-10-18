@@ -19,6 +19,14 @@ import News from "@/pages/News";
 import Live from "@/pages/Live";
 import Trades from "@/pages/Trades";
 import Announcements from "@/pages/Announcements";
+import Predictions from "@/pages/Predictions";
+import TeamProfile from "@/pages/TeamProfile";
+import Club from "@/pages/Club";
+import Power from "@/pages/Power";
+import Recap from "@/pages/Recap";
+import Game from "@/pages/Game";
+import Trophies from "@/pages/Trophies";
+import SubNav from "@/components/layout/SubNav";
 
 /** გვერდის შეცვლისას თავში ავდივართ */
 function ScrollTop() {
@@ -69,6 +77,7 @@ export default function App() {
         <LeagueProvider data={state.data}>
           <SiteHeader league={state.data.league} season={state.data.current.label} />
           <main className="container relative z-10 min-h-[60vh]">
+            <SubNav />
             <PageTransition>
             <Routes>
               <Route path="/" element={<Home />} />
@@ -83,6 +92,13 @@ export default function App() {
               <Route path="/live" element={<Live />} />
               <Route path="/trades" element={<Trades />} />
               <Route path="/announcements" element={<Announcements />} />
+              <Route path="/predictions" element={<Predictions />} />
+              <Route path="/team/:tid" element={<TeamProfile />} />
+              <Route path="/club" element={<Club />} />
+              <Route path="/power" element={<Power />} />
+              <Route path="/recap" element={<Recap />} />
+              <Route path="/game" element={<Game />} />
+              <Route path="/trophies" element={<Trophies />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
             </PageTransition>

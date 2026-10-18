@@ -130,3 +130,49 @@ def drop_reactions(aid):
         fields = [f for f in (_redis("HKEYS", R_KEY) or []) if f.startswith(aid + "|")]
         if fields:
             _redis("HDEL", R_KEY, *fields)
+
+
+# ── ზოგადი hash-ები (პროგნოზები და ა.შ.) ──
+KV_LOCAL = os.path.join(HERE, "kv.local.json")
+
+
+def _kv_load():
+    try:
+        with open(KV_LOCAL, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def _kv_save(d):
+    with open(KV_LOCAL, "w", encoding="utf-8") as f:
+        json.dump(d, f, ensure_ascii=False)
+
+
+def hgetall(key):
+    if _local():
+        return dict(_kv_load().get(key, {}))
+    if enabled():
+        raw = _redis("HGETALL", key) or []
+        return dict(zip(raw[::2], raw[1::2]))
+    return {}
+
+
+def hset(key, field, value):
+    if _local():
+        d = _kv_load()
+        d.setdefault(key, {})[field] = value
+        _kv_save(d)
+        return
+    if not enabled():
+        raise RuntimeError("Redis არ არის დაკავშირებული (Vercel → Storage → Upstash Redis)")
+    _redis("HSET", key, field, value)
+
+
+def hdel(key, field):
+    if _local():
+        d = _kv_load()
+        d.get(key, {}).pop(field, None)
+        _kv_save(d)
+    elif enabled():
+        _redis("HDEL", key, field)

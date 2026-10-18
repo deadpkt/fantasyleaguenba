@@ -1,20 +1,14 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import {
-  ArrowLeftRight,
   ArrowRight,
-  BookOpen,
   ChevronLeft,
   ChevronRight,
-  CalendarRange,
   Crown,
   Dices,
   Flame,
-  Medal,
   Radio,
-  Swords,
   TrendingUp,
-  type LucideIcon,
 } from "lucide-react";
 import { useData } from "@/lib/league";
 import { clean, fmt, plain, signedPct } from "@/lib/format";
@@ -28,6 +22,7 @@ import type { AnnouncementsData } from "@/types";
 import { ArticleCard } from "@/pages/News";
 import { AnnouncementCard, Ball } from "@/components/league/announcement";
 import { PlayerPhoto, TeamAvatar } from "@/components/league/team";
+import { SECTIONS } from "@/components/layout/SiteHeader";
 import { CountText, CountUp } from "@/components/league/CountUp";
 
 function Trophy({ className }: { className?: string }) {
@@ -157,21 +152,12 @@ function TeamStack({ names }: { names: string[] }) {
       <div className="text-xs leading-tight text-muted-foreground">
         <div className="font-semibold text-foreground">{names.length} მენეჯერი</div>
         <span className="inline-flex items-center gap-1">
-          ერთი ბანერი <ArrowRight className="h-3 w-3 transition-transform duration-300 group-hover/stack:translate-x-0.5" />
+          ყველა გუნდი <ArrowRight className="h-3 w-3 transition-transform duration-300 group-hover/stack:translate-x-0.5" />
         </span>
       </div>
     </Link>
   );
 }
-
-const TILES: [string, string, string, LucideIcon, string][] = [
-  ["/live", "Live", "მატჩაფები რეალურ დროში", Radio, "var(--red)"],
-  ["/trades", "ტრეიდები", "ვინ ვის რა მისცა", ArrowLeftRight, "var(--blue)"],
-  ["/history", "ისტორია", "ჩემპიონები, All-Time", BookOpen, "var(--gold)"],
-  ["/records", "რეკორდები", "ლიგის რეკორდები", Medal, "var(--gold)"],
-  ["/seasons", "სეზონები", "კვირები, დრაფტი", CalendarRange, "var(--win)"],
-  ["/h2h", "Head to Head", "ვინ ვის ფლობს", Swords, "var(--red)"],
-];
 
 /** ბოლო განცხადებები — მიმაგრებული ზემოთ, მერე ახალი */
 function RecentAnnouncements() {
@@ -182,7 +168,7 @@ function RecentAnnouncements() {
     <section className="space-y-4">
       <SectionTitle
         to="/announcements"
-        sub="კომისრის ტრიბუნიდან"
+        sub="ლიგის ახალი ამბები"
         title={
           <>
             <Ball className="h-6 w-6 transition-transform duration-700 hover:rotate-[360deg]" /> განცხადებები
@@ -209,11 +195,11 @@ function useFacts(): Fact[] {
   const top = <K extends keyof (typeof at)[number]>(k: K) => [...at].sort((x, y) => Number(y[k]) - Number(x[k]))[0];
 
   const titles = top("titles");
-  if (titles?.titles) out.push({ icon: "🏆", label: "დინასტია", text: <>{b(clean(titles.team))} ლიგის ისტორიაში ყველაზე მეტ ტიტულს ფლობს — {b(titles.titles)} ({titles.titles_y.join(", ")}).</> });
+  if (titles?.titles) out.push({ icon: "🏆", label: "დინასტია", text: <>{b(clean(titles.team))} ლიგაში ყველაზე მეტი ტიტული აქვს: {b(titles.titles)} ({titles.titles_y.join(", ")}).</> });
   const pct = top("pct");
-  if (pct) out.push({ icon: "📊", label: "All-Time", text: <>ყველა დროის საუკეთესო მოგების პროცენტი {b(clean(pct.team))}-ს აქვს — {b(`${(pct.pct * 100).toFixed(1)}%`)} ({pct.w}-{pct.l}).</> });
+  if (pct) out.push({ icon: "📊", label: "All-Time", text: <>ყველა დროის საუკეთესო მოგების % {b(clean(pct.team))}-ს აქვს: {b(`${(pct.pct * 100).toFixed(1)}%`)} ({pct.w}-{pct.l}).</> });
   const ppg = top("ppg");
-  if (ppg) out.push({ icon: "🔥", label: "შეტევა", text: <>{b(clean(ppg.team))} საშუალოდ {b(fmt(Math.round(ppg.ppg)))} ქულას აგროვებს კვირაში — ლიგაში ყველაზე მეტს.</> });
+  if (ppg) out.push({ icon: "🔥", label: "შეტევა", text: <>{b(clean(ppg.team))} საშუალოდ {b(fmt(Math.round(ppg.ppg)))} ქულას აგროვებს კვირაში. ლიგაში ყველაზე მეტს.</> });
   const po = top("playoffs");
   if (po?.playoffs) out.push({ icon: "🎟️", label: "პლეიოფი", text: <>{b(clean(po.team))} პლეიოფში {b(po.playoffs)}-ჯერ მოხვდა {po.seasons} სეზონიდან.</> });
 
@@ -236,9 +222,9 @@ function useFacts(): Fact[] {
   }
   if (most) {
     const [i, j, w, l] = most;
-    out.push({ icon: "⚔️", label: "მთავარი დაპირისპირება", text: <>{b(clean(teams[i]))} და {b(clean(teams[j]))} {b(w + l)}-ჯერ შეხვდნენ — {w}-{l}.</> });
+    out.push({ icon: "⚔️", label: "მთავარი დაპირისპირება", text: <>{b(clean(teams[i]))} და {b(clean(teams[j]))} {b(w + l)}-ჯერ შეხვდნენ, ანგარიში {w}-{l}.</> });
   }
-  for (const r of data.records.slice(0, 4)) out.push({ icon: "📌", label: "რეკორდი", text: <>{r.k}: {b(r.v)} — {clean(r.who)}{r.when ? `, ${r.when}` : ""}.</> });
+  for (const r of data.records.slice(0, 4)) out.push({ icon: "📌", label: "რეკორდი", text: <>{r.k}: {b(r.v)}, {clean(r.who)}{r.when ? ` (${r.when})` : ""}.</> });
   return out;
 }
 
@@ -260,7 +246,7 @@ function DidYouKnow() {
 
   return (
     <section className="space-y-4">
-      <SectionTitle title="იცოდი?" sub="ფაქტები ლიგის ისტორიიდან" />
+      <SectionTitle title="იცოდი?" sub="ლიგის ისტორიიდან" />
       <Card className="tone-card overflow-hidden" style={tone("blue")} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
         <div className="flex items-center gap-4 p-5 sm:gap-6 sm:p-7">
           <div key={`i${i}`} className="fact-in grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] text-3xl sm:h-16 sm:w-16 sm:text-4xl">
@@ -336,13 +322,13 @@ export default function Home() {
   const recScores = recTeam ? recTeam.scores.map((x) => (x ? x[0] : 0)) : [];
   const trades = data.trades?.past?.[0];
   const ticker = [
-    champ && `🏆 მოქმედი ჩემპიონი — ${clean(champ.team)} (${champ.rec})`,
-    mvp && `⭐ ${last?.label} MVP — ${mvp.player} · ${fmt(mvp.total)} FP`,
-    high && `🔥 რეკორდული კვირა — ${high.v} · ${clean(high.who)}`,
-    steal && `📈 დრაფტის Steal — ${steal.player}: #${steal.n} → #${steal.rank}`,
-    lucky && `🍀 ყველაზე იღბლიანი — ${clean(lucky.name)} ${signedPct(lucky.luck)}`,
+    champ && `🏆 მოქმედი ჩემპიონი: ${clean(champ.team)} (${champ.rec})`,
+    mvp && `⭐ ${last?.label} MVP: ${mvp.player} · ${fmt(mvp.total)} FP`,
+    high && `🔥 რეკორდული კვირა: ${high.v} · ${clean(high.who)}`,
+    steal && `📈 დრაფტის Steal: ${steal.player}: #${steal.n} → #${steal.rank}`,
+    lucky && `🍀 ყველაზე იღბლიანი: ${clean(lucky.name)} ${signedPct(lucky.luck)}`,
     trades && `🔁 ${trades.season}: ${trades.total} ტრეიდი`,
-    streak && `⚡ ${streak.k} — ${streak.v} · ${clean(streak.who)}`,
+    streak && `⚡ ${streak.k}: ${streak.v} · ${clean(streak.who)}`,
     `🏀 ${current.standings.length} გუნდი · ${data.champions.length} ჩემპიონი ისტორიაში`,
   ].filter(Boolean) as string[];
 
@@ -364,7 +350,7 @@ export default function Home() {
             {clean(data.league)}
           </h1>
           <p className="hero-in max-w-md text-base text-muted-foreground" style={{ animationDelay: "160ms" }}>
-            ცხრილი, Live მატჩაფები, ისტორია და რეკორდები — პირდაპირ ESPN-იდან, ავტომატურად.
+            ცხრილი, Live მატჩაფები, ისტორია და რეკორდები. ყველაფერი ESPN-იდან ახლდება.
           </p>
           <div className="hero-in flex flex-wrap items-center gap-x-6 gap-y-4" style={{ animationDelay: "240ms" }}>
             <div className="flex gap-2">
@@ -393,7 +379,7 @@ export default function Home() {
 
       {/* Storylines */}
       <section className="space-y-4">
-        <SectionTitle title="Storylines" sub="მთავარი ამბები ახალ სეზონამდე" />
+        <SectionTitle title="Storylines" sub="სეზონის დაწყებამდე" />
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
           {champ && (
@@ -436,7 +422,7 @@ export default function Home() {
                 </div>
                 <p className="flex items-center gap-2 text-sm text-amber-100/70">
                   <span className="h-px w-6 bg-gradient-to-r from-amber-400 to-transparent" />
-                  ტახტი დაკავებულია. {current.label}-ში ყველა მასზე ნადირობს.
+                  მოქმედი ჩემპიონი. {current.label}-ში ყველა მის დამარცხებას ეცდება.
                 </p>
               </CardContent>
             </Card>
@@ -546,30 +532,39 @@ export default function Home() {
 
       <LatestNews />
 
-      {/* სწრაფი ლინკები */}
+      {/* ყველა გვერდი, ჯგუფებად */}
       <section className="space-y-4">
-        <SectionTitle title="გადახედე" sub="ლიგის ყველა კუთხე" />
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-          {TILES.map(([to, t, d, Icon, c]) => (
-            <Link
-              key={to}
-              to={to}
-              className="tile group relative overflow-hidden rounded-2xl border border-white/10 bg-card/60 p-4 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-[hsl(var(--c)/0.45)] sm:p-5"
-              style={{ ["--c" as string]: c }}
-            >
-              <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[hsl(var(--c)/0.18)] opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100" />
-              <div className="relative flex items-start justify-between">
-                <span className="grid h-10 w-10 place-items-center rounded-xl border border-[hsl(var(--c)/0.3)] bg-[hsl(var(--c)/0.12)] text-[hsl(var(--c))] transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6">
-                  <Icon className="h-5 w-5" />
-                </span>
-                <ArrowRight className="h-4 w-4 -translate-x-1 text-muted-foreground opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100" />
-              </div>
-              <div className="relative mt-4 font-semibold">{t}</div>
-              <div className="relative mt-0.5 text-xs text-muted-foreground">{d}</div>
-            </Link>
-          ))}
+        <SectionTitle title="ყველა გვერდი" sub="სწრაფი გადასვლა" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {SECTIONS.filter((sec) => sec.pages.length > 1).map((sec) => {
+            const Icon = sec.icon;
+            return (
+              <Card key={sec.label} className="p-4">
+                <div className="mb-2 flex items-center gap-2 font-semibold">
+                  <span className="grid h-8 w-8 place-items-center rounded-lg border border-orange-400/25 bg-orange-400/10 text-orange-300">
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  {sec.label}
+                </div>
+                <div className="space-y-0.5">
+                  {sec.pages.map(({ to, label, icon: PIcon }) => (
+                    <Link
+                      key={to}
+                      to={to}
+                      className="group flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-white/[0.05] hover:text-foreground"
+                    >
+                      <PIcon className="h-3.5 w-3.5" />
+                      <span className="flex-1">{label}</span>
+                      <ArrowRight className="h-3.5 w-3.5 -translate-x-1 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
+                    </Link>
+                  ))}
+                </div>
+              </Card>
+            );
+          })}
         </div>
       </section>
+
     </div>
   );
 }

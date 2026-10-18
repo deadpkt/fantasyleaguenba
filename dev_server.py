@@ -23,6 +23,8 @@ import logo  # noqa: E402
 import news as news_api  # noqa: E402
 import live as live_api  # noqa: E402
 import announcements as ann_api  # noqa: E402
+import pickem as pick_api  # noqa: E402
+import community as com_api  # noqa: E402
 
 
 class Dev(SimpleHTTPRequestHandler):
@@ -36,6 +38,10 @@ class Dev(SimpleHTTPRequestHandler):
             return live_api.handler.do_GET(self)
         if self.path.startswith("/api/announcements"):
             return ann_api.handler.do_GET(self)
+        if self.path.startswith("/api/pickem"):
+            return pick_api.handler.do_GET(self)
+        if self.path.startswith("/api/community"):
+            return com_api.handler.do_GET(self)
         if self.path.startswith("/api/news"):
             return news_api.handler.do_GET(self)
         if self.path.startswith("/api/logo"):
@@ -45,11 +51,16 @@ class Dev(SimpleHTTPRequestHandler):
     def do_POST(self):
         if self.path.startswith("/api/announcements"):
             return ann_api.handler.do_POST(self)
+        if self.path.startswith("/api/pickem"):
+            return pick_api.handler.do_POST(self)
+        if self.path.startswith("/api/community"):
+            return com_api.handler.do_POST(self)
         self.send_error(404)
 
     # ann_api.handler-ის დამხმარე მეთოდი
     _send = ann_api.handler._send
     _react = ann_api.handler._react
+    _me = com_api.handler._me
 
 
 if __name__ == "__main__":

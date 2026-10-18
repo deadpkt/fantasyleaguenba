@@ -159,7 +159,7 @@ export default function News() {
             <Card>
               <CardHeader className="pb-1">
                 <CardTitle className="text-base">მოთამაშეების სიახლეები</CardTitle>
-                <CardDescription>Rotowire · ESPN. ფანტაზი-ცნობები ლიგის მოთამაშეებზე — ბეჯზე ჩანს, ვის ჰყავს.</CardDescription>
+                <CardDescription>Rotowire · ESPN. ფანტაზი ამბები ლიგის მოთამაშეებზე. ბეჯზე ჩანს, ვის გუნდშია.</CardDescription>
               </CardHeader>
               <CardContent className="divide-y divide-white/5">
                 {state.data.fantasy.map((n, i) => (

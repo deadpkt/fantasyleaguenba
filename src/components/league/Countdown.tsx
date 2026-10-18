@@ -53,7 +53,7 @@ export default function Countdown({ draft, drafted }: { draft: DraftInfo | null;
       </CardHeader>
       <CardContent>
         {left === 0 ? (
-          <p className="text-sm">დრაფტი მიმდინარეობს — შედი ESPN-ის Draft Room-ში.</p>
+          <p className="text-sm">დრაფტი დაიწყო. შედი ESPN-ის Draft Room-ში.</p>
         ) : (
           <div className="grid grid-cols-4 gap-2" role="timer" aria-label="დრაფტამდე დარჩენილი დრო">
             {cells.map(([v, l]) => (

@@ -82,7 +82,18 @@ function writeMine(s: Set<string>) {
 const LABELS: Record<string, string> = { "🔥": "ცეცხლი", "🏀": "Swish", "😂": "სასაცილო", "👏": "ბრავო", "😮": "ვაუ", "💀": "მოკვდა" };
 
 /** ემოჯი-რეაქციები: "+" ღილაკი ხსნის არჩევანს, აბრები აჩვენებს რაოდენობას */
-export function Reactions({ id, initial }: { id: string; initial?: Record<string, number> }) {
+export function Reactions({
+  id,
+  initial,
+  endpoint = "/api/announcements",
+  action = "react",
+}: {
+  id: string;
+  initial?: Record<string, number>;
+  /** სად ინახება: განცხადებები ან ტრეშ-თოქი */
+  endpoint?: string;
+  action?: string;
+}) {
   const [counts, setCounts] = useState<Record<string, number>>(initial ?? {});
   const [mine, setMine] = useState<Set<string>>(readMine);
   const [burst, setBurst] = useState<{ emoji: string; n: number } | null>(null);
@@ -122,10 +133,10 @@ export function Reactions({ id, initial }: { id: string; initial?: Record<string
     setCounts((c) => ({ ...c, [emoji]: Math.max(0, (c[emoji] ?? 0) + delta) }));
     if (on) setBurst({ emoji, n: Date.now() });
     try {
-      const r = await fetch("/api/announcements", {
+      const r = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "react", id, emoji, delta }),
+        body: JSON.stringify({ action, id, emoji, delta }),
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || typeof d.count !== "number") throw new Error(d.error || `HTTP ${r.status}`);
@@ -254,7 +265,7 @@ export function AnnouncementCard({ a, index = 0, compact, actions }: { a: Announ
           <div className="flex min-w-0 items-start gap-3">
             {/* "შოთ-კლოკის" სტილის თარიღი */}
             <div className="flex shrink-0 flex-col items-center rounded-md border border-white/10 bg-black/60 px-2 py-1 font-mono leading-none">
-              <span className="text-[15px] font-bold text-orange-400 [text-shadow:0_0_8px_rgba(249,115,22,0.6)]">{fmtAnnDate(a).split(" ")[0] || "—"}</span>
+              <span className="text-[15px] font-bold text-orange-400 [text-shadow:0_0_8px_rgba(249,115,22,0.6)]">{fmtAnnDate(a).split(" ")[0] || "-"}</span>
               <span className="mt-0.5 text-[9px] tracking-widest text-muted-foreground">{fmtAnnDate(a).split(" ")[1] || ""}</span>
             </div>
             <div className="min-w-0 space-y-1.5">

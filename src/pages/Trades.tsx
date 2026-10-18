@@ -67,7 +67,7 @@ export default function Trades() {
             <div>
               <h2 className="text-lg font-semibold">სეზონი {p.season}</h2>
               <p className="text-sm text-muted-foreground">
-                სულ {p.total} ტრეიდი. ESPN წინა სეზონების ტრეიდების დეტალებს აღარ გასცემს — აქ ჩანს, ვინ რამდენი გააკეთა.
+                სულ {p.total} ტრეიდი. ESPN წინა სეზონების ტრეიდების დეტალებს აღარ აჩვენებს, ამიტომ აქ მხოლოდ რაოდენობა ჩანს.
               </p>
             </div>
             <Card>

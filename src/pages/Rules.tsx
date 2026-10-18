@@ -34,7 +34,7 @@ export default function Rules() {
 
   return (
     <>
-      <PageHeader title="წესები და ქულები" description="რამდენ ფანტაზი-ქულას იღებს მოთამაშე თითოეულ მოქმედებაზე — პირდაპირ ESPN-ის ლიგის პარამეტრებიდან." />
+      <PageHeader title="წესები და ქულები" description="რამდენ ქულას იღებს მოთამაშე თითო მოქმედებაზე. მონაცემები ESPN-ის ლიგის პარამეტრებიდანაა." />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.1fr_1fr]">
         {/* ტიპური მოქმედებები */}
@@ -43,7 +43,7 @@ export default function Rules() {
             <CardTitle className="flex items-center gap-2 text-base">
               <Calculator className="h-4 w-4 text-gold" /> რამდენი ქულა იწერება?
             </CardTitle>
-            <CardDescription>ESPN ერთ მოქმედებაზე რამდენიმე სტატს ერთად ითვლის — აქ უკვე შეკრებილია.</CardDescription>
+            <CardDescription>ESPN ერთ მოქმედებაზე რამდენიმე სტატს ითვლის, აქ უკვე შეკრებილია.</CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {s.examples.map((e) => (

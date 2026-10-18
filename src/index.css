@@ -316,3 +316,53 @@
   .reveal:not(.shown):not(.pass-in) { opacity: 1; }
   .reveal.shown, .page-in, .head-line, .ball-spin, .shown .bar-grow, .shown .bar-fill, .fact-in { animation: none; }
 }
+
+/* პროგნოზი — ✓ ნიშნის გამოჩენა */
+.pick-pop { animation: pick-pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1); }
+@keyframes pick-pop {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pick-pop { animation: none; }
+}
+
+/* ბეჯები */
+.badge-in { animation: badge-in 0.5s cubic-bezier(0.3, 1.4, 0.5, 1) backwards; }
+@keyframes badge-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.85); }
+}
+/* გულშემატკივრობის ფონი პროფილზე */
+.fan-bg { animation: fan-bg 0.9s ease-out; }
+@keyframes fan-bg { from { opacity: 0; } }
+.fan-logo { animation: fan-logo 24s ease-in-out infinite alternate; }
+@keyframes fan-logo {
+  from { transform: rotate(-10deg) scale(1); }
+  to { transform: rotate(-4deg) scale(1.06); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .badge-in, .fan-bg, .fan-logo { animation: none; }
+}
+
+/* ტროფეები */
+.trophy { animation: badge-in 0.6s cubic-bezier(0.3, 1.4, 0.5, 1) backwards; }
+.trophy-shine {
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%);
+  background-size: 250% 100%;
+  background-position: 120% 0;
+  -webkit-mask-image: linear-gradient(#000, #000);
+  mix-blend-mode: overlay;
+  transition: background-position 0.9s ease;
+}
+.trophy:hover .trophy-shine { background-position: -20% 0; }
+@media (prefers-reduced-motion: reduce) {
+  .trophy { animation: none; }
+}
+
+/* კავშირების დიაგრამა */
+.shown .conn-line { stroke-dasharray: 60; animation: conn-line 1s ease-out backwards; }
+@keyframes conn-line { from { stroke-dashoffset: 60; } to { stroke-dashoffset: 0; } }
+.conn-node { animation: badge-in 0.5s cubic-bezier(0.3, 1.4, 0.5, 1) backwards; }
+@media (prefers-reduced-motion: reduce) {
+  .shown .conn-line, .conn-node { animation: none; }
+}

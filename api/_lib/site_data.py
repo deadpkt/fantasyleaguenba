@@ -37,6 +37,7 @@ def build():
         "standings": [{"name": t.team_name.strip(), "w": t.wins, "l": t.losses, "pf": round(t.points_for)}
                       for t in sorted(league.teams, key=lambda t: (t.standing or 99, -t.wins))],
         "draft": _draft_info(league),
+        "schedule": _schedule(S.get(cur_y)),
     }
 
     # ჩემპიონები
@@ -119,6 +120,8 @@ def build():
                 "trades": {"team": a["trades"]["name"].strip(), "v": a["trades"]["trades"]},
                 "best_week": {"team": a["best_week"][1].strip(), "v": round(a["best_week"][0]), "p": a["best_week"][2]} if a["best_week"] else None,
             },
+            "games": [{"p": g["p"], "h": s["teams"].get(str(g["h"]), {}).get("name", "?").strip(), "a": s["teams"].get(str(g["a"]), {}).get("name", "?").strip(),
+                       "hs": round(g["hs"]), "as": round(g["as"]), "po": g["po"]} for g in H.done_games(s)],
             "weekly": {"weeks": weeks, "teams": [{"name": s["teams"][k]["name"].strip(),
                                                   "scores": [grid[k].get(w) for w in weeks]} for k in tids]},
             "luck": [{"name": x["name"].strip(), "real": round(x["real"], 3), "allplay": round(x["allplay"], 3),
@@ -188,7 +191,9 @@ def build():
         c = (H.career(S, owner) or {}) if owner else {}
         played = bool(r and r["w"] + r["l"] + r["t"] > 0)
         managers.append({
+            "tid": t.team_id,
             "team": " ".join(t.team_name.split()), "abbrev": t.team_abbrev, "logo": t.logo_url or None,
+            "roster": _roster(t),
             "fan": fan_by_tid.get(str(t.team_id)),
             "rookie": not played,
             "ovr": c.get("ovr") if played else None,
@@ -204,6 +209,26 @@ def build():
             "seasons": seasons, "h2h": matrix, "logos": logos, "fans": fans, "managers": managers,
             "settings": _settings(league),
             "trades": {"current": trades_mod.current(league), "past": trades_mod.past(S, H.season_label)}}
+
+
+def _schedule(s):
+    """მიმდინარე სეზონის რეგულარული კალენდარი: [{p, h, a, hs, as, done}] (სახელებით)."""
+    if not s:
+        return []
+    nm = lambda tid: s["teams"].get(str(tid), {}).get("name", "?").strip()
+    return [{"p": g["p"], "h": nm(g["h"]), "a": nm(g["a"]), "hs": round(g["hs"]), "as": round(g["as"]),
+             "done": g["win"] != "UNDECIDED"} for g in s["games"] if not g["po"]]
+
+
+def _roster(team):
+    """გუნდის ახლანდელი შემადგენლობა (დრაფტამდე ცარიელია)."""
+    out = []
+    for p in getattr(team, "roster", None) or []:
+        inj = getattr(p, "injuryStatus", None)
+        out.append({"name": p.name, "pid": p.playerId, "pos": getattr(p, "position", None), "pro": getattr(p, "proTeam", None),
+                    "avg": round(float(getattr(p, "avg_points", 0) or 0), 1),
+                    "injury": inj if inj not in (None, "ACTIVE", "NORMAL") else None})
+    return sorted(out, key=lambda r: -r["avg"])
 
 
 def _settings(league):

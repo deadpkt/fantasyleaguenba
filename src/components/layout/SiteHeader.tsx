@@ -5,15 +5,21 @@ import {
   BookOpen,
   CalendarRange,
   ChevronDown,
+  Clapperboard,
+  Gamepad2,
   Home,
   Medal,
   Megaphone,
   Menu,
+  MessagesSquare,
   Newspaper,
   Radio,
   ScrollText,
   Swords,
   Table2,
+  Target,
+  TrendingUp,
+  Trophy,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -22,26 +28,60 @@ import { clean } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
-type Group = "ლიგა" | "სეზონი" | "ისტორია";
-type Route = { to: string; label: string; icon: LucideIcon; group: Group; more?: boolean };
+export type Page = { to: string; label: string; icon: LucideIcon };
+type Section = { label: string; icon: LucideIcon; pages: Page[]; also?: string[] };
 
-export const ROUTES: Route[] = [
-  { to: "/", label: "მთავარი", icon: Home, group: "ლიგა" },
-  { to: "/live", label: "Live", icon: Radio, group: "ლიგა" },
-  { to: "/announcements", label: "განცხადებები", icon: Megaphone, group: "ლიგა" },
-  { to: "/news", label: "სიახლეები", icon: Newspaper, group: "ლიგა" },
-  { to: "/managers", label: "მენეჯერები", icon: Users, group: "სეზონი" },
-  { to: "/standings", label: "ცხრილი", icon: Table2, group: "სეზონი" },
-  { to: "/trades", label: "ტრეიდები", icon: ArrowLeftRight, group: "სეზონი" },
-  { to: "/rules", label: "წესები", icon: ScrollText, group: "სეზონი", more: true },
-  { to: "/history", label: "ისტორია", icon: BookOpen, group: "ისტორია", more: true },
-  { to: "/records", label: "რეკორდები", icon: Medal, group: "ისტორია", more: true },
-  { to: "/seasons", label: "სეზონები", icon: CalendarRange, group: "ისტორია", more: true },
-  { to: "/h2h", label: "H2H", icon: Swords, group: "ისტორია", more: true },
+/** საიტის სტრუქტურა: 7 ჯგუფი, თითოში — გვერდები (ზედა ქვე-მენიუში ჩანს) */
+export const SECTIONS: Section[] = [
+  { label: "მთავარი", icon: Home, pages: [{ to: "/", label: "მთავარი", icon: Home }] },
+  { label: "Live", icon: Radio, pages: [{ to: "/live", label: "Live", icon: Radio }] },
+  {
+    label: "სეზონი",
+    icon: Table2,
+    pages: [
+      { to: "/standings", label: "ცხრილი", icon: Table2 },
+      { to: "/power", label: "რეიტინგი", icon: TrendingUp },
+      { to: "/recap", label: "კვირის რეპორტაჟი", icon: Clapperboard },
+      { to: "/trades", label: "ტრეიდები", icon: ArrowLeftRight },
+    ],
+  },
+  { label: "გუნდები", icon: Users, pages: [{ to: "/managers", label: "გუნდები", icon: Users }], also: ["/team/"] },
+  {
+    label: "კლუბი",
+    icon: MessagesSquare,
+    pages: [
+      { to: "/club", label: "ტრეშ-თოქი", icon: MessagesSquare },
+      { to: "/predictions", label: "პროგნოზები", icon: Target },
+      { to: "/game", label: "ვინ არის?", icon: Gamepad2 },
+    ],
+  },
+  {
+    label: "ისტორია",
+    icon: BookOpen,
+    pages: [
+      { to: "/history", label: "ჩემპიონები", icon: BookOpen },
+      { to: "/trophies", label: "ტროფეები", icon: Trophy },
+      { to: "/records", label: "რეკორდები", icon: Medal },
+      { to: "/seasons", label: "სეზონები", icon: CalendarRange },
+      { to: "/h2h", label: "H2H", icon: Swords },
+    ],
+  },
+  {
+    label: "სიახლეები",
+    icon: Newspaper,
+    pages: [
+      { to: "/news", label: "სიახლეები", icon: Newspaper },
+      { to: "/announcements", label: "განცხადებები", icon: Megaphone },
+      { to: "/rules", label: "წესები", icon: ScrollText },
+    ],
+  },
 ];
-const GROUPS: Group[] = ["ლიგა", "სეზონი", "ისტორია"];
+/** ყველა გვერდი ერთ სიაში (PageHeader-ის აიკონისთვის) */
+export const ROUTES: Page[] = SECTIONS.flatMap((s) => s.pages);
 
 const isActive = (to: string, path: string) => (to === "/" ? path === "/" : path.startsWith(to));
+export const sectionOf = (path: string) =>
+  SECTIONS.find((s) => s.pages.some((p) => isActive(p.to, path)) || s.also?.some((a) => path.startsWith(a)));
 
 function Brand({ league }: { league: string }) {
   return (
@@ -69,66 +109,6 @@ function SeasonPill({ season }: { season: string }) {
       </span>
       {season}
     </span>
-  );
-}
-
-/** "მეტი ▾" — ნაკლებად ხშირად გამოყენებული გვერდები */
-function MoreMenu({ active }: { active: boolean }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const { pathname } = useLocation();
-
-  useEffect(() => setOpen(false), [pathname]);
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(false);
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative z-10" data-active={active}>
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-haspopup="menu"
-        onClick={() => setOpen(!open)}
-        className={cn(
-          "flex items-center gap-1 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[13px] transition-colors duration-200",
-          active ? "text-black" : "text-muted-foreground hover:bg-white/[0.06] hover:text-foreground",
-        )}
-      >
-        მეტი <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} />
-      </button>
-      {open && (
-        <div
-          role="menu"
-          className="absolute right-0 top-[calc(100%+10px)] w-52 rounded-xl border border-white/10 bg-zinc-950/95 p-1.5 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.9)] backdrop-blur-xl animate-in fade-in-0 zoom-in-95"
-        >
-          {ROUTES.filter((r) => r.more).map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              role="menuitem"
-              className={({ isActive: a }) =>
-                cn(
-                  "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
-                  a ? "bg-white text-black" : "text-muted-foreground hover:bg-white/[0.06] hover:text-foreground",
-                )
-              }
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-            </NavLink>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -161,26 +141,87 @@ function DesktopNav() {
           style={{ left: pill.left, width: pill.width }}
         />
       )}
-      {ROUTES.filter((r) => !r.more).map(({ to, label, icon: Icon }) => {
-        const active = isActive(to, pathname);
-        return (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === "/"}
-            data-active={active}
-            className={cn(
-              "relative z-10 flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[13px] transition-colors duration-200",
-              active ? "text-black" : "text-muted-foreground hover:bg-white/[0.06] hover:text-foreground",
-            )}
-          >
-            <Icon className="h-3.5 w-3.5" />
-            {label}
-          </NavLink>
-        );
-      })}
-      <MoreMenu active={ROUTES.some((r) => r.more && isActive(r.to, pathname))} />
+      {SECTIONS.map((sec) => (
+        <NavGroup key={sec.label} sec={sec} active={sectionOf(pathname) === sec} />
+      ))}
     </nav>
+  );
+}
+
+/** ჯგუფი ნავბარში: ერთი გვერდი — ბმული; რამდენიმე — ჩამოსაშლელი მენიუ (მაუსზე ან დაჭერით) */
+function NavGroup({ sec, active }: { sec: Section; active: boolean }) {
+  const [open, setOpen] = useState(false);
+  const { pathname } = useLocation();
+  const ref = useRef<HTMLDivElement>(null);
+  const timer = useRef<number>();
+  const Icon = sec.icon;
+  const cls = cn(
+    "relative z-10 flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] transition-colors duration-200",
+    active ? "text-black" : "text-muted-foreground hover:bg-white/[0.06] hover:text-foreground",
+  );
+
+  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  if (sec.pages.length === 1) {
+    return (
+      <div data-active={active} className="relative z-10">
+        <NavLink to={sec.pages[0].to} end={sec.pages[0].to === "/"} className={cls}>
+          <Icon className="h-3.5 w-3.5" />
+          {sec.label}
+        </NavLink>
+      </div>
+    );
+  }
+
+  const enter = () => {
+    window.clearTimeout(timer.current);
+    setOpen(true);
+  };
+  const leave = () => {
+    timer.current = window.setTimeout(() => setOpen(false), 150);
+  };
+
+  return (
+    <div ref={ref} data-active={active} className="relative z-10" onMouseEnter={enter} onMouseLeave={leave}>
+      <button type="button" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(!open)} className={cls}>
+        <Icon className="h-3.5 w-3.5" />
+        {sec.label}
+        <ChevronDown className={cn("h-3 w-3 opacity-60 transition-transform duration-200", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div role="menu" className="absolute left-1/2 top-full z-50 -translate-x-1/2 pt-2.5">
+          <div className="w-56 rounded-xl border border-white/10 bg-zinc-950/95 p-1.5 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.9)] backdrop-blur-xl animate-in fade-in-0 zoom-in-95 slide-in-from-top-1">
+            {sec.pages.map(({ to, label, icon: PIcon }) => (
+              <NavLink
+                key={to}
+                to={to}
+                role="menuitem"
+                className={({ isActive: a }) =>
+                  cn(
+                    "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
+                    a ? "bg-white text-black" : "text-muted-foreground hover:bg-white/[0.06] hover:text-foreground",
+                  )
+                }
+              >
+                <PIcon className="h-4 w-4" />
+                {label}
+              </NavLink>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -244,12 +285,14 @@ export default function SiteHeader({ league, season }: { league: string; season:
                   </div>
                   <span className="absolute inset-x-5 -bottom-px h-px bg-gradient-to-r from-[hsl(var(--red)/0.6)] via-[hsl(var(--gold)/0.5)] to-[hsl(var(--blue)/0.6)]" />
                 </div>
-                <nav className="flex-1 space-y-5 overflow-y-auto p-3">
-                  {GROUPS.map((g) => (
-                    <div key={g} className="space-y-1">
-                      <div className="px-3 pb-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground/70">{g}</div>
-                      {ROUTES.filter((r) => r.group === g).map(({ to, label, icon: Icon }) => {
-                        const active = isActive(to, pathname);
+                <nav className="flex-1 space-y-4 overflow-y-auto p-3">
+                  {SECTIONS.map((sec) => (
+                    <div key={sec.label} className="space-y-1">
+                      {sec.pages.length > 1 && (
+                        <div className="px-3 pb-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground/70">{sec.label}</div>
+                      )}
+                      {sec.pages.map(({ to, label, icon: Icon }) => {
+                        const active = isActive(to, pathname) || (sec.pages.length === 1 && sectionOf(pathname) === sec);
                         return (
                           <NavLink
                             key={to}

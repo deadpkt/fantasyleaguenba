@@ -48,7 +48,7 @@ export default function History() {
       <section className="mt-10 space-y-3">
         <div>
           <h2 className="text-lg font-semibold">All-Time</h2>
-          <p className="text-sm text-muted-foreground">OVR — მენეჯერის რეიტინგი 60-დან 99-მდე: მოგების %, ქულები, ტიტულები.</p>
+          <p className="text-sm text-muted-foreground">OVR არის მენეჯერის რეიტინგი 60-დან 99-მდე. ითვლება მოგების %-ით, ქულებით და ტიტულებით.</p>
         </div>
         <Card>
           <Table>

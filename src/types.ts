@@ -20,6 +20,26 @@ export interface CurrentSeason {
   drafted: boolean;
   standings: Standing[];
   draft: DraftInfo | null;
+  /** რეგულარული სეზონის კალენდარი (პლეიოფის შანსებისთვის) */
+  schedule: SchedGame[];
+}
+
+export interface SchedGame {
+  p: number;
+  h: string;
+  a: string;
+  hs: number;
+  as: number;
+  done: boolean;
+}
+
+export interface PlayedGame {
+  p: number;
+  h: string;
+  a: string;
+  hs: number;
+  as: number;
+  po: boolean;
 }
 
 export interface Champion {
@@ -127,6 +147,7 @@ export interface Season {
   complete: boolean;
   standings: SeasonStanding[];
   awards: Awards;
+  games: PlayedGame[];
   weekly: Weekly;
   luck: LuckRow[];
   power: PowerRow[];
@@ -151,7 +172,18 @@ export interface LeagueData {
   trades?: Trades;
 }
 
+export interface RosterPlayer {
+  name: string;
+  pid: number;
+  pos: string | null;
+  pro: string | null;
+  avg: number;
+  injury: string | null;
+}
+
 export interface Manager {
+  tid: number;
+  roster: RosterPlayer[];
   team: string;
   abbrev: string;
   logo: string | null;
@@ -274,4 +306,68 @@ export interface AnnouncementsData {
   items: Announcement[];
   writable: boolean;
   admin: boolean;
+}
+
+export interface PickTeam {
+  tid: number;
+  name: string;
+}
+
+export interface PickMatchup {
+  id: string;
+  home: PickTeam;
+  away: PickTeam;
+  /** გამარჯვებულის team_id; 0 = ფრე; null = ჯერ არ დასრულებულა */
+  winner: number | null;
+}
+
+export interface PickRow extends PickTeam {
+  points: number;
+  correct: number;
+  total: number;
+  perfect: number;
+  oracle: number;
+}
+
+export interface PickemData {
+  season: number;
+  weeks: number;
+  current_week: number;
+  open_week: number | null;
+  week: number;
+  lock_at: number | null;
+  locked: boolean;
+  matchups: PickMatchup[];
+  submitted: number[];
+  /** team_id → {matchup_id: გამარჯვებული} — მხოლოდ ჩაკეტვის შემდეგ */
+  picks: Record<string, Record<string, number>>;
+  teams: (PickTeam & { has_pin: boolean })[];
+  leaderboard: PickRow[];
+  oracle: { week: number; tids: number[]; correct: number; of: number } | null;
+  writable: boolean;
+}
+
+export interface Poll {
+  id: string;
+  q: string;
+  options: string[];
+  created: string;
+  closed: boolean;
+  /** team_id → ვარიანტის ინდექსი */
+  votes: Record<string, number>;
+}
+
+export interface WallPost {
+  id: string;
+  tid: number;
+  target: number | null;
+  text: string;
+  created: string;
+  reactions?: Record<string, number>;
+}
+
+export interface CommunityData {
+  polls: Poll[];
+  wall: WallPost[];
+  writable: boolean;
 }
