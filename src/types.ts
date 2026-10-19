@@ -168,8 +168,20 @@ export interface LeagueData {
   /** გუნდის სახელი → NBA გუნდის კოდი (fans.json) */
   fans: Record<string, string>;
   managers: Manager[];
+  waivers: WaiverPlayer[];
+  current_draft: CurrentDraftPick[];
   settings: LeagueSettings | null;
   trades?: Trades;
+}
+
+export interface CurrentDraftPick {
+  n: number;
+  round: number;
+  pick: number;
+  pid: number;
+  player: string;
+  team: string;
+  projected: number;
 }
 
 export interface RosterPlayer {
@@ -198,7 +210,13 @@ export interface Manager {
   best_week: number;
   ppg: number;
   playoffs: number;
+  season_acquisitions: number;
+  season_trades: number;
   seasons: { season: string; team: string; rec: string; champ: boolean }[];
+}
+
+export interface WaiverPlayer extends RosterPlayer {
+  projected_avg: number;
 }
 
 export interface LeagueSettings {

@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   ArrowLeftRight,
+  BarChart3,
   BookOpen,
   CalendarRange,
   ChevronDown,
@@ -10,10 +11,8 @@ import {
   Medal,
   Megaphone,
   Menu,
-  Newspaper,
   Radio,
   Percent,
-  ScrollText,
   Swords,
   Table2,
   Target,
@@ -26,6 +25,8 @@ import { cn } from "@/lib/utils";
 import { clean } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import type { LeagueData } from "@/types";
+import NotificationBell from "@/components/league/NotificationBell";
 
 export type Page = { to: string; label: string; icon: LucideIcon };
 type Section = { label: string; icon: LucideIcon; pages: Page[]; also?: string[] };
@@ -41,6 +42,8 @@ export const SECTIONS: Section[] = [
       { to: "/standings", label: "ცხრილი", icon: Table2 },
       { to: "/power", label: "რეიტინგი", icon: TrendingUp },
       { to: "/odds", label: "შანსები", icon: Percent },
+      { to: "/analytics", label: "ანალიტიკა", icon: BarChart3 },
+      { to: "/draft-grades", label: "Draft Grades", icon: Medal },
       { to: "/recap", label: "კვირის რეპორტაჟი", icon: Clapperboard },
       { to: "/trades", label: "ტრეიდები", icon: ArrowLeftRight },
     ],
@@ -58,15 +61,7 @@ export const SECTIONS: Section[] = [
       { to: "/h2h", label: "H2H", icon: Swords },
     ],
   },
-  {
-    label: "სიახლეები",
-    icon: Newspaper,
-    pages: [
-      { to: "/news", label: "სიახლეები", icon: Newspaper },
-      { to: "/announcements", label: "განცხადებები", icon: Megaphone },
-      { to: "/rules", label: "წესები", icon: ScrollText },
-    ],
-  },
+  { label: "განცხადებები", icon: Megaphone, pages: [{ to: "/announcements", label: "განცხადებები", icon: Megaphone }] },
 ];
 /** ყველა გვერდი ერთ სიაში (PageHeader-ის აიკონისთვის) */
 export const ROUTES: Page[] = SECTIONS.flatMap((s) => s.pages);
@@ -217,7 +212,7 @@ function NavGroup({ sec, active }: { sec: Section; active: boolean }) {
   );
 }
 
-export default function SiteHeader({ league, season }: { league: string; season: string }) {
+export default function SiteHeader({ league, season, data }: { league: string; season: string; data?: LeagueData }) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { pathname } = useLocation();
@@ -256,9 +251,11 @@ export default function SiteHeader({ league, season }: { league: string; season:
           <div className="ml-auto hidden 2xl:block">
             <SeasonPill season={season} />
           </div>
+          <div className="hidden xl:block"><NotificationBell data={data} /></div>
 
           {/* ტელეფონი / პლანშეტი */}
           <div className="ml-auto flex items-center gap-2 xl:hidden">
+            <NotificationBell data={data} />
             <span className="hidden sm:inline-flex">
               <SeasonPill season={season} />
             </span>

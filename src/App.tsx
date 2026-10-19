@@ -14,8 +14,6 @@ import History from "@/pages/History";
 import Records from "@/pages/Records";
 import Seasons from "@/pages/Seasons";
 import HeadToHead from "@/pages/HeadToHead";
-import Rules from "@/pages/Rules";
-import News from "@/pages/News";
 import Live from "@/pages/Live";
 import Trades from "@/pages/Trades";
 import Announcements from "@/pages/Announcements";
@@ -25,6 +23,8 @@ import Power from "@/pages/Power";
 import Recap from "@/pages/Recap";
 import Trophies from "@/pages/Trophies";
 import Odds from "@/pages/Odds";
+import Analytics from "@/pages/Analytics";
+import DraftGrades from "@/pages/DraftGrades";
 import SubNav from "@/components/layout/SubNav";
 
 /** გვერდის შეცვლისას თავში ავდივართ */
@@ -74,7 +74,7 @@ export default function App() {
         </>
       ) : (
         <LeagueProvider data={state.data}>
-          <SiteHeader league={state.data.league} season={state.data.current.label} />
+          <SiteHeader league={state.data.league} season={state.data.current.label} data={state.data} />
           <main className="container relative z-10 min-h-[60vh]">
             <SubNav />
             <PageTransition>
@@ -86,8 +86,6 @@ export default function App() {
               <Route path="/records" element={<Records />} />
               <Route path="/seasons" element={<Seasons />} />
               <Route path="/h2h" element={<HeadToHead />} />
-              <Route path="/news" element={<News />} />
-              <Route path="/rules" element={<Rules />} />
               <Route path="/live" element={<Live />} />
               <Route path="/trades" element={<Trades />} />
               <Route path="/announcements" element={<Announcements />} />
@@ -95,6 +93,8 @@ export default function App() {
               <Route path="/team/:tid" element={<TeamProfile />} />
               <Route path="/power" element={<Power />} />
               <Route path="/odds" element={<Odds />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/draft-grades" element={<DraftGrades />} />
               <Route path="/recap" element={<Recap />} />
               <Route path="/trophies" element={<Trophies />} />
               <Route path="*" element={<Navigate to="/" replace />} />

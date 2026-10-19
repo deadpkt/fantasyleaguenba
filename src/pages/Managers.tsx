@@ -7,6 +7,7 @@ import { NBA, nbaLogo } from "@/lib/nba";
 import type { Manager } from "@/types";
 import { achievements } from "@/lib/badges";
 import { LORE } from "@/data/lore";
+import { key } from "@/lib/season";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import PageHeader from "@/components/layout/PageHeader";
@@ -32,6 +33,16 @@ function ManagerCard({ m }: { m: Manager }) {
   const nba = m.fan ? NBA[m.fan] : undefined;
   const c1 = nba?.primary ?? "#3b82f6";
   const c2 = nba?.secondary ?? "#ef4444";
+  const standing = data.current.standings.find((s) => key(s.name) === key(m.team));
+  const games = (standing?.w ?? 0) + (standing?.l ?? 0);
+  const winScore = games ? ((standing?.w ?? 0) / games) * 100 : 50;
+  const weeks = data.settings?.regular_season_weeks || 19;
+  const powers = data.managers.map((x) => x.roster.reduce((sum, p) => sum + p.projected, 0) / weeks);
+  const leaguePower = powers.reduce((a, b) => a + b, 0) / Math.max(1, powers.length);
+  const myPower = m.roster.reduce((sum, p) => sum + p.projected, 0) / weeks;
+  const rosterScore = Math.max(20, Math.min(90, 50 + ((myPower - leaguePower) / Math.max(leaguePower, 1)) * 180));
+  const activityScore = Math.min(100, 35 + m.season_acquisitions * 5 + m.season_trades * 10);
+  const gmScore = Math.round(games ? winScore * 0.5 + rosterScore * 0.35 + activityScore * 0.15 : rosterScore * 0.75 + activityScore * 0.25);
   const style = {
     borderColor: `${c1}55`,
     background: `radial-gradient(130% 90% at 100% 0%, ${c1}38, transparent 60%), linear-gradient(180deg, hsl(var(--card) / 0.92), hsl(var(--card) / 0.86))`,
@@ -80,6 +91,14 @@ function ManagerCard({ m }: { m: Manager }) {
                 {nba.name} fan
               </div>
             )}
+          </div>
+
+          <div className="grid grid-cols-3 gap-1.5 text-center">
+            {[[String(gmScore), "GM ინდექსი"], [String(m.season_acquisitions), "Waiver"], [String(m.season_trades), "Trades"]].map(([v, l]) => (
+              <div key={l} className="rounded-md border border-white/10 bg-black/30 px-1 py-2">
+                <div className="text-sm font-semibold tabular">{v}</div><div className="text-[10px] text-muted-foreground">{l}</div>
+              </div>
+            ))}
           </div>
 
           {earned.length > 0 && (

@@ -9,10 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import PageHeader from "@/components/layout/PageHeader";
 import { TeamAvatar } from "@/components/league/team";
+import ShareButton from "@/components/league/ShareButton";
 
 type Award = { icon: string; label: string; team: string; value: string; sub: string; tone: "gold" | "red" | "blue" | "win" };
 
-function awards(games: PlayedGame[]): Award[] {
+function awards(games: PlayedGame[], previous: PlayedGame[] = []): Award[] {
   if (!games.length) return [];
   const sides = games.flatMap((g) => [
     { team: g.h, s: g.hs, opp: g.a, os: g.as },
@@ -53,6 +54,14 @@ function awards(games: PlayedGame[]): Award[] {
     out.push({ icon: "🍀", label: "იღბლიანი მოგება", team: l.team, value: fmt(l.s), sub: `და მაინც მოიგო`, tone: "win" });
   }
   out.push({ icon: "🧊", label: "ყინულის კვირა", team: low.team, value: fmt(low.s), sub: "კვირის ყველაზე დაბალი", tone: "blue" });
+  const previousScores = new Map(previous.flatMap((g) => [[g.h, g.hs] as const, [g.a, g.as] as const]));
+  const changes = sides.filter((x) => previousScores.has(x.team)).map((x) => ({ ...x, change: x.s - previousScores.get(x.team)! }));
+  if (changes.length) {
+    const rise = by(changes, (x) => x.change);
+    const fall = by(changes, (x) => -x.change);
+    out.push({ icon: "📈", label: "აღმასვლა", team: rise.team, value: `${rise.change >= 0 ? "+" : ""}${fmt(rise.change)}`, sub: "წინა კვირასთან შედარებით", tone: "win" });
+    out.push({ icon: "📉", label: "დაღმასვლა", team: fall.team, value: fmt(fall.change), sub: "წინა კვირასთან შედარებით", tone: "red" });
+  }
   return out;
 }
 
@@ -73,7 +82,8 @@ export default function Recap() {
   const [wk, setWk] = useState<number | null>(null);
   const week = wk ?? weeks[weeks.length - 1];
   const games = (season?.games ?? []).filter((g) => g.p === week);
-  const list = awards(games);
+  const previousGames = (season?.games ?? []).filter((g) => g.p === week - 1);
+  const list = awards(games, previousGames);
   const wi = weeks.indexOf(week);
 
   if (!season) {
@@ -87,7 +97,9 @@ export default function Recap() {
 
   return (
     <>
-      <PageHeader title="კვირის რეპორტაჟი" description="ყოველი კვირის მთავარი მომენტები: საუკეთესო, ყველაზე დიდი მოგება, უიღბლო წაგება და სხვა." />
+      <PageHeader title="კვირის რეპორტაჟი" description="ყოველი კვირის მთავარი მომენტები: საუკეთესო, ყველაზე დიდი მოგება, უიღბლო წაგება და სხვა.">
+        <ShareButton title={`${season.label} · კვირა ${week}`} text={headline(games, week)} />
+      </PageHeader>
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-1.5">

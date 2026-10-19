@@ -8,6 +8,7 @@ import { cn, tone } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import PageHeader from "@/components/layout/PageHeader";
 import { TeamAvatar } from "@/components/league/team";
+import ShareButton from "@/components/league/ShareButton";
 
 const pct = (value: number) =>
   value >= 0.995 ? ">99%" : value > 0 && value < 0.005 ? "<1%" : `${Math.round(value * 100)}%`;
@@ -53,7 +54,7 @@ export default function Odds() {
       <PageHeader
         title={`შანსები · ${data.current.label}`}
         description={`მხოლოდ ${data.current.label} მიმდინარე სეზონი: ვინ გავა პლეი-ოფში, ფინალში და ვის აქვს ჩემპიონობის საუკეთესო შანსი — დარჩენილი კალენდრის 6 000 სიმულაციით. მონაცემები ESPN-იდან ავტომატურად ახლდება.`}
-      />
+      ><ShareButton title={`WCF შანსები · ${data.current.label}`} text={odds.slice(0, 3).map((o, i) => `${i + 1}. ${clean(o.name)} — ჩემპიონობა ${pct(o.title)}`).join("\n")} /></PageHeader>
 
       <Card className="mb-5">
         <CardContent className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4 text-sm text-muted-foreground">

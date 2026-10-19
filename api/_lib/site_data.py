@@ -194,6 +194,8 @@ def build():
             "tid": t.team_id,
             "team": " ".join(t.team_name.split()), "abbrev": t.team_abbrev, "logo": t.logo_url or None,
             "roster": _roster(t),
+            "season_acquisitions": int(getattr(t, "acquisitions", 0) or 0),
+            "season_trades": int(getattr(t, "trades", 0) or 0),
             "fan": fan_by_tid.get(str(t.team_id)),
             "rookie": not played,
             "ovr": c.get("ovr") if played else None,
@@ -207,7 +209,7 @@ def build():
     return {"league": league.settings.name.strip(), "updated": datetime.date.today().isoformat(),
             "current": cur, "champions": champs, "alltime": alltime, "records": records,
             "seasons": seasons, "h2h": matrix, "logos": logos, "fans": fans, "managers": managers,
-            "settings": _settings(league),
+            "settings": _settings(league), "waivers": _waivers(league), "current_draft": _current_draft(league),
             "trades": {"current": trades_mod.current(league), "past": trades_mod.past(S, H.season_label)}}
 
 
@@ -230,6 +232,34 @@ def _roster(team):
                     "projected": round(float(getattr(p, "projected_total_points", 0) or 0), 1),
                     "injury": inj if inj not in (None, "ACTIVE", "NORMAL") else None})
     return sorted(out, key=lambda r: -r["avg"])
+
+
+def _waivers(league):
+    """საუკეთესო თავისუფალი აგენტები — მიმდინარე ფორმით, შემდეგ სეზონის projection-ით."""
+    try:
+        players = league.free_agents(size=50)
+    except Exception:
+        return []
+    out = []
+    for p in players:
+        injury = getattr(p, "injuryStatus", None)
+        out.append({
+            "name": p.name, "pid": p.playerId, "pos": getattr(p, "position", None),
+            "pro": getattr(p, "proTeam", None), "avg": round(float(getattr(p, "avg_points", 0) or 0), 1),
+            "projected_avg": round(float(getattr(p, "projected_avg_points", 0) or 0), 1),
+            "projected": round(float(getattr(p, "projected_total_points", 0) or 0), 1),
+            "injury": injury if injury not in (None, "ACTIVE", "NORMAL") else None,
+        })
+    return sorted(out, key=lambda p: (p["injury"] is None, p["avg"], p["projected_avg"]), reverse=True)[:24]
+
+
+def _current_draft(league):
+    projections = {p.playerId: float(getattr(p, "projected_total_points", 0) or 0)
+                   for t in league.teams for p in (getattr(t, "roster", None) or [])}
+    return [{"n": i, "round": p.round_num, "pick": p.round_pick, "pid": p.playerId,
+             "player": p.playerName, "team": " ".join(getattr(p.team, "team_name", "?").split()),
+             "projected": round(projections.get(p.playerId, 0), 1)}
+            for i, p in enumerate(league.draft or [], 1) if p.playerId and p.playerId > 0]
 
 
 def _settings(league):
