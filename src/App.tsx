@@ -21,11 +21,10 @@ import Trades from "@/pages/Trades";
 import Announcements from "@/pages/Announcements";
 import Predictions from "@/pages/Predictions";
 import TeamProfile from "@/pages/TeamProfile";
-import Club from "@/pages/Club";
 import Power from "@/pages/Power";
 import Recap from "@/pages/Recap";
-import Game from "@/pages/Game";
 import Trophies from "@/pages/Trophies";
+import Odds from "@/pages/Odds";
 import SubNav from "@/components/layout/SubNav";
 
 /** გვერდის შეცვლისას თავში ავდივართ */
@@ -94,10 +93,9 @@ export default function App() {
               <Route path="/announcements" element={<Announcements />} />
               <Route path="/predictions" element={<Predictions />} />
               <Route path="/team/:tid" element={<TeamProfile />} />
-              <Route path="/club" element={<Club />} />
               <Route path="/power" element={<Power />} />
+              <Route path="/odds" element={<Odds />} />
               <Route path="/recap" element={<Recap />} />
-              <Route path="/game" element={<Game />} />
               <Route path="/trophies" element={<Trophies />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

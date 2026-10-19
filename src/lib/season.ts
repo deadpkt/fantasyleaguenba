@@ -57,14 +57,26 @@ function stateAt(data: LeagueData, upTo: number) {
 
 export const lastDoneWeek = (data: LeagueData) => Math.max(0, ...data.current.schedule.filter((g) => g.done).map((g) => g.p));
 
-/** "სასტარტო ძალა": გასული სეზონების PPG, საშუალოსკენ მიწეული (დრაფტის მერე როსტერი სულ სხვაა);
- *  ახალბედებს — ლიგის საშუალო */
-const SHRINK = 0.35;
+/** "სასტარტო ძალა": მიმდინარე სეზონის დრაფტირებული roster-ის ESPN projections.
+ * რეალური კვირების დაგროვებასთან ერთად projection-ის წონა მცირდება. */
 function priors(data: LeagueData) {
-  const known = data.managers.filter((m) => m.ppg > 0).map((m) => m.ppg);
+  const weeks = data.settings?.regular_season_weeks || 19;
+  const availability = (injury: string | null) => {
+    const status = (injury || "").toUpperCase();
+    if (status.includes("OUT") || status.includes("IR")) return 0.68;
+    if (status.includes("SUSP")) return 0.55;
+    if (status.includes("DOUBT")) return 0.82;
+    if (status.includes("DAY_TO_DAY") || status.includes("QUESTION")) return 0.92;
+    return 1;
+  };
+  const projected = data.managers.map((m) => ({
+    name: m.team,
+    weekly: m.roster.reduce((sum, p) => sum + (p.projected || 0) * availability(p.injury), 0) / weeks,
+  }));
+  const known = projected.filter((x) => x.weekly > 0).map((x) => x.weekly);
   const avg = known.length ? known.reduce((a, b) => a + b, 0) / known.length : 2000;
   const out = new Map<string, number>();
-  for (const m of data.managers) out.set(key(m.team), m.ppg > 0 ? avg + SHRINK * (m.ppg - avg) : avg);
+  for (const team of projected) out.set(key(team.name), team.weekly > 0 ? team.weekly : avg);
   for (const s of data.current.standings) if (!out.has(key(s.name))) out.set(key(s.name), avg);
   return { map: out, avg };
 }
@@ -162,6 +174,8 @@ export interface OddsRow {
   seed: number;
   w: number;
   l: number;
+  expected: number;
+  trend: number;
 }
 
 export function playoffOdds(data: LeagueData, sims = 6000): OddsRow[] {
@@ -169,13 +183,20 @@ export function playoffOdds(data: LeagueData, sims = 6000): OddsRow[] {
   const pr = priors(data);
   const st = stateAt(data, 99);
   const names = [...st.keys()];
-  // ძალა: სეზონის საშუალო + "სასტარტო" (3 კვირის წონით)
+  // ძალა: მიმდინარე სეზონის რეალური საშუალო + ამავე სეზონის roster projection (3 კვირის წონით)
   const mean = new Map<string, number>();
+  const trends = new Map<string, number>();
   for (const k of names) {
     const t = st.get(k)!;
     const n = t.scores.length;
     const prior = pr.map.get(k) ?? pr.avg;
-    mean.set(k, (t.pf + 3 * prior) / (n + 3));
+    const seasonAvg = n ? t.pf / n : prior;
+    const recent = t.scores.slice(-3);
+    const recentAvg = recent.length ? recent.reduce((a, b) => a + b, 0) / recent.length : prior;
+    const formWeight = Math.min(2.25, recent.length * 0.75);
+    const expected = (3 * prior + n * seasonAvg + formWeight * recentAvg) / (3 + n + formWeight);
+    mean.set(k, expected);
+    trends.set(k, n ? (recentAvg - seasonAvg) / Math.max(seasonAvg, 1) : 0);
   }
   const sd = (k: string) => Math.max(150, 0.12 * (mean.get(k) ?? pr.avg));
   const roll = (k: string) => (mean.get(k) ?? pr.avg) + gauss() * sd(k);
@@ -222,6 +243,8 @@ export function playoffOdds(data: LeagueData, sims = 6000): OddsRow[] {
         seed: t.playoffs ? t.seedSum / t.playoffs : 0,
         w: s.w,
         l: s.l,
+        expected: Math.round(mean.get(k) ?? pr.avg),
+        trend: trends.get(k) ?? 0,
       };
     })
     .sort((a, b) => b.title - a.title || b.playoffs - a.playoffs);

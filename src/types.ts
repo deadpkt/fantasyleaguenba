@@ -178,6 +178,8 @@ export interface RosterPlayer {
   pos: string | null;
   pro: string | null;
   avg: number;
+  /** მიმდინარე სეზონის ESPN projected fantasy points */
+  projected: number;
   injury: string | null;
 }
 

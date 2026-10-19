@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { LeagueData } from "../types";
 
 type State =
@@ -10,20 +10,29 @@ type State =
 export function useLeague(): State {
   const [state, setState] = useState<State>({ status: "loading" });
 
-  useEffect(() => {
-    let alive = true;
-    fetch("/api/data", { headers: { accept: "application/json" } })
-      .then(async (r) => {
-        const body = await r.json();
-        if (!r.ok || body.error) throw new Error(body.error || `HTTP ${r.status}`);
-        return body as LeagueData;
-      })
-      .then((data) => alive && setState({ status: "ready", data }))
-      .catch((e: Error) => alive && setState({ status: "error", message: e.message }));
-    return () => {
-      alive = false;
-    };
+  const load = useCallback(async (silent = false) => {
+    try {
+      const r = await fetch("/api/data", { headers: { accept: "application/json" }, cache: "no-store" });
+      const body = await r.json();
+      if (!r.ok || body.error) throw new Error(body.error || `HTTP ${r.status}`);
+      setState({ status: "ready", data: body as LeagueData });
+    } catch (e) {
+      if (!silent) setState({ status: "error", message: (e as Error).message });
+    }
   }, []);
+
+  useEffect(() => {
+    load();
+    const refresh = () => document.visibilityState === "visible" && load(true);
+    const id = window.setInterval(refresh, 10 * 60_000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [load]);
 
   return state;
 }
