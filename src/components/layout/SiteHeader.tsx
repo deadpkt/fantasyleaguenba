@@ -15,7 +15,6 @@ import {
   Percent,
   Swords,
   Table2,
-  Target,
   TrendingUp,
   Trophy,
   Users,
@@ -49,7 +48,6 @@ export const SECTIONS: Section[] = [
     ],
   },
   { label: "გუნდები", icon: Users, pages: [{ to: "/managers", label: "გუნდები", icon: Users }], also: ["/team/"] },
-  { label: "პროგნოზები", icon: Target, pages: [{ to: "/predictions", label: "პროგნოზები", icon: Target }] },
   {
     label: "ისტორია",
     icon: BookOpen,

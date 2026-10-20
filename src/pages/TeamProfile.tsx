@@ -1,9 +1,8 @@
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { ArrowLeftRight, Award, CalendarRange, Crown, Lock, Shirt, Swords, Target, TrendingUp } from "lucide-react";
+import { ArrowLeftRight, Award, CalendarRange, Crown, Lock, Shirt, Swords, TrendingUp } from "lucide-react";
 import { useData } from "@/lib/league";
-import { useApi } from "@/lib/useApi";
 import { clean, plain } from "@/lib/format";
 import { espnImage } from "@/lib/logos";
 import { NBA, nbaLogo } from "@/lib/nba";
@@ -11,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { achievements, type Achievement } from "@/lib/badges";
 import { LORE, type Lore } from "@/data/lore";
 import Connections from "@/components/league/Connections";
-import type { Manager, PickemData } from "@/types";
+import type { Manager } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PlayerPhoto, TeamAvatar } from "@/components/league/team";
@@ -157,7 +156,6 @@ export default function TeamProfile() {
   const { tid } = useParams();
   const data = useData();
   const m = data.managers.find((x) => String(x.tid) === tid);
-  const pick = useApi<PickemData>("/api/pickem");
   if (!m) return <Navigate to="/managers" replace />;
 
   const nba = m.fan ? NBA[m.fan] : undefined;
@@ -188,10 +186,7 @@ export default function TeamProfile() {
 
   // ტრეიდები ამ სეზონში
   const trades = (data.trades?.current ?? []).filter((t) => t.sides.some((s) => same(s.team, m.team) || (s.to != null && same(s.to, m.team))));
-  const pickRow = pick.state.status === "ready" ? pick.state.data.leaderboard.find((r) => r.tid === m.tid) : undefined;
-  const pickRank = pick.state.status === "ready" ? pick.state.data.leaderboard.findIndex((r) => r.tid === m.tid) + 1 : 0;
-
-  const badges = achievements(data, m, pickRow);
+  const badges = achievements(data, m);
   const earned = badges.filter((b) => b.earned).length;
 
   return (
@@ -371,29 +366,6 @@ export default function TeamProfile() {
         </div>
 
         <div className="space-y-6">
-          {/* პროგნოზები */}
-          <Section icon={<Target className="h-4 w-4" />} title="პროგნოზები">
-            {pickRow ? (
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-3xl font-bold tabular">{pickRow.points}</div>
-                  <div className="text-xs text-muted-foreground">
-                    ქულა · #{pickRank} · {pickRow.total ? `${pickRow.correct}/${pickRow.total} სწორი` : "ჯერ არ დათვლილა"}
-                  </div>
-                </div>
-                <div className="text-right text-sm">
-                  {pickRow.oracle > 0 && <div>👑 ×{pickRow.oracle}</div>}
-                  {pickRow.perfect > 0 && <div>💯 ×{pickRow.perfect}</div>}
-                  <Link to="/predictions" className="text-xs text-muted-foreground underline-offset-2 hover:underline">
-                    პროგნოზები →
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">იტვირთება…</p>
-            )}
-          </Section>
-
           {/* H2H */}
           <Section icon={<Swords className="h-4 w-4" />} title="Head to Head" sub="ყველა სეზონი, რეგულარული">
             {rivals.length === 0 ? (

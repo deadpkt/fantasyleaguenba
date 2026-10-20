@@ -17,7 +17,6 @@ import HeadToHead from "@/pages/HeadToHead";
 import Live from "@/pages/Live";
 import Trades from "@/pages/Trades";
 import Announcements from "@/pages/Announcements";
-import Predictions from "@/pages/Predictions";
 import TeamProfile from "@/pages/TeamProfile";
 import Power from "@/pages/Power";
 import Recap from "@/pages/Recap";
@@ -89,7 +88,6 @@ export default function App() {
               <Route path="/live" element={<Live />} />
               <Route path="/trades" element={<Trades />} />
               <Route path="/announcements" element={<Announcements />} />
-              <Route path="/predictions" element={<Predictions />} />
               <Route path="/team/:tid" element={<TeamProfile />} />
               <Route path="/power" element={<Power />} />
               <Route path="/odds" element={<Odds />} />
