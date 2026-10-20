@@ -1,13 +1,44 @@
 import { useState } from "react";
 import { Check, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-export default function ShareButton({ title, text }: { title: string; text: string }) {
+export default function ShareButton({
+  title,
+  text,
+  url,
+  iconOnly = false,
+  className,
+}: {
+  title: string;
+  text: string;
+  url?: string;
+  iconOnly?: boolean;
+  className?: string;
+}) {
   const [done, setDone] = useState(false);
   const share = async () => {
-    if (navigator.share) await navigator.share({ title, text, url: window.location.href });
-    else await navigator.clipboard.writeText(`${title}\n${text}\n${window.location.href}`);
-    setDone(true); window.setTimeout(() => setDone(false), 1800);
+    const shareUrl = url ?? window.location.href;
+    try {
+      if (navigator.share) await navigator.share({ title, text, url: shareUrl });
+      else await navigator.clipboard.writeText(`${title}\n${text}\n${shareUrl}`);
+      setDone(true);
+      window.setTimeout(() => setDone(false), 1800);
+    } catch (error) {
+      if ((error as DOMException).name !== "AbortError") console.error("Share failed", error);
+    }
   };
-  return <Button variant="outline" size="sm" onClick={share}>{done ? <Check /> : <Share2 />}{done ? "დაკოპირდა" : "გაზიარება"}</Button>;
+  return (
+    <Button
+      variant={iconOnly ? "ghost" : "outline"}
+      size={iconOnly ? "icon" : "sm"}
+      className={cn(className)}
+      onClick={share}
+      aria-label={done ? "ლინკი დაკოპირდა" : "გაზიარება"}
+      title={done ? "დაკოპირდა" : "გაზიარება"}
+    >
+      {done ? <Check /> : <Share2 />}
+      {!iconOnly && (done ? "დაკოპირდა" : "გაზიარება")}
+    </Button>
+  );
 }

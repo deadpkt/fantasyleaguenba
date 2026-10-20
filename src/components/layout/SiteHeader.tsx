@@ -15,7 +15,6 @@ import {
   Percent,
   Swords,
   Table2,
-  TrendingUp,
   Trophy,
   Users,
   type LucideIcon,
@@ -39,7 +38,6 @@ export const SECTIONS: Section[] = [
     icon: Table2,
     pages: [
       { to: "/standings", label: "ცხრილი", icon: Table2 },
-      { to: "/power", label: "რეიტინგი", icon: TrendingUp },
       { to: "/odds", label: "შანსები", icon: Percent },
       { to: "/analytics", label: "ანალიტიკა", icon: BarChart3 },
       { to: "/draft-grades", label: "Draft Grades", icon: Medal },

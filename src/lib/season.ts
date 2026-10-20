@@ -14,10 +14,10 @@ export function phi(x: number) {
   return x >= 0 ? (1 + y) / 2 : (1 - y) / 2;
 }
 
-function gauss() {
+function gauss(random = Math.random) {
   let u = 0;
-  while (!u) u = Math.random();
-  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random());
+  while (!u) u = random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * random());
 }
 
 /** მატჩის მოგების შანსი პროგნოზირებული (ან მიმდინარე) ქულით */
@@ -63,22 +63,52 @@ function priors(data: LeagueData) {
   const weeks = data.settings?.regular_season_weeks || 19;
   const availability = (injury: string | null) => {
     const status = (injury || "").toUpperCase();
-    if (status.includes("OUT") || status.includes("IR")) return 0.68;
-    if (status.includes("SUSP")) return 0.55;
-    if (status.includes("DOUBT")) return 0.82;
-    if (status.includes("DAY_TO_DAY") || status.includes("QUESTION")) return 0.92;
+    if (status.includes("OUT") || status.includes("IR")) return 0.8;
+    if (status.includes("SUSP")) return 0.7;
+    if (status.includes("DOUBT")) return 0.9;
+    if (status.includes("DAY_TO_DAY") || status.includes("QUESTION")) return 0.97;
     return 1;
   };
-  const projected = data.managers.map((m) => ({
-    name: m.team,
-    weekly: m.roster.reduce((sum, p) => sum + (p.projected || 0) * availability(p.injury), 0) / weeks,
+  const projected = data.managers.map((m) => {
+    const players = m.roster
+      .map((p) => ({ total: (p.projected || 0) * availability(p.injury), avg: p.projected_avg || 0 }))
+      .filter((p) => p.total > 0 || p.avg > 0);
+    const byAvg = [...players].sort((a, b) => b.avg - a.avg);
+    const season = players.reduce((sum, p) => sum + p.total, 0);
+    const rotation = byAvg.slice(0, 10).reduce((sum, p) => sum + p.avg, 0);
+    const stars = byAvg.slice(0, 3).reduce((sum, p) => sum + p.avg, 0);
+    const depth = byAvg.slice(5, 10).reduce((sum, p) => sum + p.avg, 0);
+    return { name: m.team, season, rotation, stars, depth, weekly: season / weeks };
+  });
+  const metricAvg = (field: "season" | "rotation" | "stars" | "depth") =>
+    projected.reduce((sum, team) => sum + team[field], 0) / Math.max(projected.length, 1) || 1;
+  const averages = {
+    season: metricAvg("season"),
+    rotation: metricAvg("rotation"),
+    stars: metricAvg("stars"),
+    depth: metricAvg("depth"),
+  };
+  const composite = projected.map((team) => ({
+    ...team,
+    strength:
+      0.5 * (team.season / averages.season) +
+      0.25 * (team.rotation / averages.rotation) +
+      0.15 * (team.stars / averages.stars) +
+      0.1 * (team.depth / averages.depth),
   }));
+  const strengthAvg = composite.reduce((sum, team) => sum + team.strength, 0) / Math.max(composite.length, 1);
+  const strengthSd = Math.sqrt(composite.reduce((sum, team) => sum + (team.strength - strengthAvg) ** 2, 0) / Math.max(composite.length, 1)) || 1;
   const known = projected.filter((x) => x.weekly > 0).map((x) => x.weekly);
   const avg = known.length ? known.reduce((a, b) => a + b, 0) / known.length : 2000;
   const out = new Map<string, number>();
-  for (const team of projected) out.set(key(team.name), team.weekly > 0 ? team.weekly : avg);
+  const ratings = new Map<string, number>();
+  for (const team of composite) {
+    const quality = team.strength / Math.max(strengthAvg, 0.01);
+    out.set(key(team.name), team.weekly > 0 ? team.weekly * (0.78 + 0.22 * quality) : avg);
+    ratings.set(key(team.name), Math.max(60, Math.min(99, 84 + 7 * ((team.strength - strengthAvg) / strengthSd))));
+  }
   for (const s of data.current.standings) if (!out.has(key(s.name))) out.set(key(s.name), avg);
-  return { map: out, avg };
+  return { map: out, ratings, avg };
 }
 
 /* ───────────── Power Rankings ───────────── */
@@ -133,11 +163,17 @@ function rankAt(data: LeagueData, week: number) {
     const last = t.scores.slice(-3);
     const lastAvg = last.length ? last.reduce((a, b) => a + b, 0) / last.length : ppg;
     const pct = n ? (t.w + 0.5 * (n - t.w - t.l)) / n : 0.5;
-    return { t, ppg, lastAvg, pct };
+    return { t, ppg, lastAvg, pct, priorScore: pr.ratings.get(key(t.name)) ?? 84 };
   });
   const maxPpg = Math.max(...rows.map((r) => r.ppg), 1);
   const maxLast = Math.max(...rows.map((r) => r.lastAvg), 1);
-  const scored = rows.map((r) => ({ ...r, score: week ? 45 * r.pct + 35 * (r.ppg / maxPpg) + 20 * (r.lastAvg / maxLast) : 100 * (r.ppg / maxPpg) }));
+  const scored = rows.map((r) => {
+    if (!week) return { ...r, score: r.priorScore };
+    const games = r.t.scores.length;
+    const liveScore = 45 * r.pct + 35 * (r.ppg / maxPpg) + 20 * (r.lastAvg / maxLast);
+    const rosterWeight = Math.max(0.2, 4 / (4 + games));
+    return { ...r, score: rosterWeight * r.priorScore + (1 - rosterWeight) * liveScore };
+  });
   scored.sort((a, b) => b.score - a.score);
   return scored;
 }
@@ -189,17 +225,31 @@ export function playoffOdds(data: LeagueData, sims = 6000): OddsRow[] {
   for (const k of names) {
     const t = st.get(k)!;
     const n = t.scores.length;
-    const prior = pr.map.get(k) ?? pr.avg;
+    const rawPrior = pr.map.get(k) ?? pr.avg;
+    // Preseason projections are estimates, not certainties. Regress them toward
+    // league average so a 19-week fantasy season does not become deterministic.
+    const prior = pr.avg + 0.58 * (rawPrior - pr.avg);
     const seasonAvg = n ? t.pf / n : prior;
     const recent = t.scores.slice(-3);
     const recentAvg = recent.length ? recent.reduce((a, b) => a + b, 0) / recent.length : prior;
-    const formWeight = Math.min(2.25, recent.length * 0.75);
-    const expected = (3 * prior + n * seasonAvg + formWeight * recentAvg) / (3 + n + formWeight);
+    const formWeight = Math.min(2, recent.length * 0.6);
+    const priorWeight = Math.max(1.5, 4.5 - n * 0.25);
+    const expected = (priorWeight * prior + n * seasonAvg + formWeight * recentAvg) / (priorWeight + n + formWeight);
     mean.set(k, expected);
     trends.set(k, n ? (recentAvg - seasonAvg) / Math.max(seasonAvg, 1) : 0);
   }
-  const sd = (k: string) => Math.max(150, 0.12 * (mean.get(k) ?? pr.avg));
-  const roll = (k: string) => (mean.get(k) ?? pr.avg) + gauss() * sd(k);
+  let seed = hash(`${data.current.label}|${data.current.schedule.map((g) => `${g.p}:${g.hs}:${g.as}:${g.done ? 1 : 0}`).join("|")}`) || 1;
+  const random = () => {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const played = Math.max(0, ...[...st.values()].map((team) => team.scores.length));
+  const weeklyVariance = Math.max(0.13, 0.19 - played * 0.003);
+  const sd = (k: string) => Math.max(300, weeklyVariance * (mean.get(k) ?? pr.avg));
+  const roll = (k: string) => (mean.get(k) ?? pr.avg) + gauss(random) * sd(k);
   const remaining = data.current.schedule.filter((g) => !g.done);
 
   const tally = new Map(names.map((k) => [k, { playoffs: 0, final: 0, title: 0, seedSum: 0 }]));

@@ -4,6 +4,7 @@ import type { Announcement } from "@/types";
 import { cn, tone } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import ShareButton from "@/components/league/ShareButton";
 
 /** კალათბურთის ბურთი (SVG) */
 export function Ball({ className, style }: { className?: string; style?: CSSProperties }) {
@@ -254,9 +255,12 @@ function CourtLines() {
 /** განცხადების ბარათი — გამოიყენება მთავარზე, სიახლეებსა და განცხადებების გვერდზე */
 export function AnnouncementCard({ a, index = 0, compact, actions }: { a: Announcement; index?: number; compact?: boolean; actions?: ReactNode }) {
   const accent = a.pinned ? "gold" : a.auto ? "blue" : "red";
+  const selected = Boolean(a.id && new URLSearchParams(window.location.search).get("announcement") === a.id);
+  const shareUrl = a.id ? `${window.location.origin}/api/announcements?preview=${encodeURIComponent(a.id)}` : window.location.href;
   return (
     <Card
-      className="tone-card lift pass-in group"
+      id={a.id ? `announcement-${a.id}` : undefined}
+      className={cn("tone-card lift pass-in group scroll-mt-28", selected && "ring-2 ring-orange-400 ring-offset-2 ring-offset-background")}
       style={{ ...tone(accent), animationDelay: `${index * 90}ms` }}
     >
       <CourtLines />
@@ -292,11 +296,24 @@ export function AnnouncementCard({ a, index = 0, compact, actions }: { a: Announ
               <CardTitle className={cn("leading-snug", compact ? "text-base" : "text-lg")}>{a.title}</CardTitle>
             </div>
           </div>
-          {actions}
+          <div className="flex shrink-0 gap-1">
+            {a.id && <ShareButton title={a.title} text={a.text ?? ""} url={shareUrl} iconOnly />}
+            {actions}
+          </div>
         </div>
       </CardHeader>
       {a.text && (
         <CardContent className={cn("relative whitespace-pre-line text-sm text-muted-foreground", compact && "line-clamp-3", a.id ? "pb-3" : compact && "pb-4")}>{a.text}</CardContent>
+      )}
+      {a.image && (
+        <div className={cn("relative px-6", a.id ? "pb-3" : "pb-5")}>
+          <img
+            src={a.image}
+            alt={a.title}
+            loading="lazy"
+            className={cn("w-full rounded-xl border border-white/10 object-cover", compact ? "max-h-56" : "max-h-[32rem]")}
+          />
+        </div>
       )}
       {a.id && (
         <div className={cn("relative px-6 pb-5", compact && "pb-4", !a.text && "pt-1")}>

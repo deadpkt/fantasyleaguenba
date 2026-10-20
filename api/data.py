@@ -31,7 +31,7 @@ class handler(BaseHTTPRequestHandler):
             body, code = json.dumps({"error": str(e)}, ensure_ascii=False).encode("utf-8"), 502
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Cache-Control", f"public, s-maxage={CACHE_SECONDS}, stale-while-revalidate=86400"
+        self.send_header("Cache-Control", f"public, s-maxage={CACHE_SECONDS}, stale-while-revalidate={CACHE_SECONDS}"
                          if code == 200 else "no-store")
         self.end_headers()
         self.wfile.write(body)

@@ -229,6 +229,7 @@ def _roster(team):
         inj = getattr(p, "injuryStatus", None)
         out.append({"name": p.name, "pid": p.playerId, "pos": getattr(p, "position", None), "pro": getattr(p, "proTeam", None),
                     "avg": round(float(getattr(p, "avg_points", 0) or 0), 1),
+                    "projected_avg": round(float(getattr(p, "projected_avg_points", 0) or 0), 1),
                     "projected": round(float(getattr(p, "projected_total_points", 0) or 0), 1),
                     "injury": inj if inj not in (None, "ACTIVE", "NORMAL") else None})
     return sorted(out, key=lambda r: -r["avg"])

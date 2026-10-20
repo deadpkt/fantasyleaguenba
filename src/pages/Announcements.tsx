@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { KeyRound, LogOut, Pin, PinOff, Send, Trash2 } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { Image, KeyRound, LogOut, Pin, PinOff, Send, Trash2 } from "lucide-react";
 import type { AnnouncementsData } from "@/types";
 import { useApi } from "@/lib/useApi";
 import { cn, tone } from "@/lib/utils";
@@ -33,6 +33,7 @@ export default function Announcements() {
   const [pwInput, setPwInput] = useState("");
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
+  const [image, setImage] = useState("");
   const [pinned, setPinned] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -87,14 +88,24 @@ export default function Announcements() {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (await act({ action: "add", title, text, pinned }, "განცხადება გამოქვეყნდა 🏀")) {
+    if (await act({ action: "add", title, text, image, pinned }, "განცხადება გამოქვეყნდა 🏀")) {
       setTitle("");
       setText("");
+      setImage("");
       setPinned(false);
     }
   };
 
   const data = state.status === "ready" ? state.data : null;
+
+  useEffect(() => {
+    if (!data) return;
+    const id = new URLSearchParams(window.location.search).get("announcement");
+    if (!id) return;
+    window.requestAnimationFrame(() => {
+      document.getElementById(`announcement-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [data]);
 
   return (
     <>
@@ -184,6 +195,28 @@ export default function Announcements() {
             <form onSubmit={submit} className="space-y-3">
               <Input id="ann-title" placeholder="სათაური" value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)} />
               <Textarea id="ann-text" placeholder="ტექსტი (არასავალდებულო)" value={text} maxLength={2000} onChange={(e) => setText(e.target.value)} />
+              <div className="space-y-2">
+                <div className="relative">
+                  <Image className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="ann-image"
+                    type="url"
+                    inputMode="url"
+                    placeholder="სურათის ლინკი (https://...) — არასავალდებულო"
+                    value={image}
+                    maxLength={1000}
+                    onChange={(e) => setImage(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                {image && (
+                  <img
+                    src={image}
+                    alt="სურათის წინასწარი ნახვა"
+                    className="max-h-56 w-full rounded-lg border border-white/10 object-cover"
+                  />
+                )}
+              </div>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
                   <input id="ann-pin" type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} className="h-4 w-4 accent-amber-400" />

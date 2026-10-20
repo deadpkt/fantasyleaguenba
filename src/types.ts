@@ -192,6 +192,8 @@ export interface RosterPlayer {
   avg: number;
   /** მიმდინარე სეზონის ESPN projected fantasy points */
   projected: number;
+  /** ESPN 2026–27 projection calculated with the league's custom scoring. */
+  projected_avg: number;
   injury: string | null;
 }
 
@@ -244,6 +246,7 @@ export interface Announcement {
   date?: string;
   title: string;
   text?: string;
+  image?: string;
   pinned?: boolean;
   auto?: boolean;
 }

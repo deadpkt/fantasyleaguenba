@@ -60,7 +60,7 @@ export default function Odds() {
         <CardContent className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-2"><Dices className="h-4 w-4 text-orange-300" /> 6 000 სიმულაცია</span>
           <span className="flex items-center gap-2"><Medal className="h-4 w-4 text-win" /> პლეი-ოფში გადის {playoffTeams} გუნდი</span>
-          <span>ითვალისწინებს მოთამაშეების projections-ს, ტრავმებს, ბოლო ფორმასა და დარჩენილ კალენდარს</span>
+          <span>2026–27 როსტერები · custom scoring · ფორმა, კალენდარი და fantasy-ს რეალური კვირეული variance</span>
         </CardContent>
       </Card>
 
