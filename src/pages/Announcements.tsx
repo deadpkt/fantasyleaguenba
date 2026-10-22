@@ -27,7 +27,7 @@ async function call(body: Record<string, unknown>) {
 }
 
 export default function Announcements() {
-  const { state, reload } = useApi<AnnouncementsData>("/api/announcements");
+  const { state, reload } = useApi<AnnouncementsData>("/api/announcements", 60_000);
   const [pw, setPw] = useState(readPw);
   const [loginOpen, setLoginOpen] = useState(false);
   const [pwInput, setPwInput] = useState("");

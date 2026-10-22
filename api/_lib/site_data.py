@@ -11,6 +11,7 @@ import league_settings
 import live_feed
 import projections as PJ
 import trades as trades_mod
+import activity as activity_mod
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -215,7 +216,8 @@ def build():
             "current": cur, "champions": champs, "alltime": alltime, "records": records,
             "seasons": seasons, "h2h": matrix, "logos": logos, "fans": fans, "managers": managers,
             "settings": _settings(league), "waivers": _waivers(league, proj), "current_draft": _current_draft(league),
-            "trades": {"current": trades_mod.current(league), "past": trades_mod.past(S, H.season_label)}}
+            "trades": {"current": trades_mod.current(league), "past": trades_mod.past(S, H.season_label)},
+            "activity": activity_mod.build(league)}
 
 
 def _schedule(s):

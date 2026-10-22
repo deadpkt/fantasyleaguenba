@@ -110,6 +110,17 @@ function Lineup({ t, view }: { t: LiveTeam; view: View }) {
           ))}
         </div>
       )}
+      {view === "week" && (t.departed?.length ?? 0) > 0 && (
+        <div className="mt-2 border-t border-dashed border-white/10 pt-2 text-xs text-muted-foreground">
+          <div className="pb-1 text-[10px] uppercase tracking-wider">წავიდა, ქულა რჩება</div>
+          {t.departed!.map((p) => (
+            <div key={p.pid} className="flex justify-between py-0.5">
+              <span>{p.name}</span>
+              <span className="tabular">{pts(p.points)}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

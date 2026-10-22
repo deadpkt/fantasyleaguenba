@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "_li
 
 import news_feed  # noqa: E402
 
-CACHE_SECONDS = 900
+CACHE_SECONDS = 180
 _mem = {"at": 0.0, "body": None}
 
 

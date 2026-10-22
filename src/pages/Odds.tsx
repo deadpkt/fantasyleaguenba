@@ -2,14 +2,12 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ArrowDownRight, ArrowUpRight, Crown, Dices, Medal, Minus, Trophy } from "lucide-react";
 import { useData } from "@/lib/league";
-import { clean, fmt } from "@/lib/format";
-import { key, playoffOdds, projectedWin } from "@/lib/season";
+import { clean } from "@/lib/format";
+import { key, playoffOdds } from "@/lib/season";
 import { cn, tone } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import PageHeader from "@/components/layout/PageHeader";
 import { PlayerPhoto, TeamAvatar } from "@/components/league/team";
 import ShareButton from "@/components/league/ShareButton";
-import Updated from "@/components/league/Updated";
 
 const pct = (value: number) => (value >= 0.995 ? ">99%" : value > 0 && value < 0.005 ? "<1%" : `${Math.round(value * 100)}%`);
 
@@ -56,66 +54,8 @@ function Chance({ label, value, kind }: { label: string; value: number; kind: "p
 }
 
 /** ამ კვირის მატჩები: ქულა ახლა, პროგნოზი კვირის ბოლოსთვის და მოგების შანსი */
-function WeekMatchups() {
-  const data = useData();
-  const pj = data.projections;
-  if (!pj) return null;
-  const games = data.current.schedule.filter((g) => g.p === pj.week);
-  const team = (n: string) => Object.entries(pj.teams).find(([k]) => key(k) === key(n))?.[1];
-  if (!games.length) return null;
-  return (
-    <section className="mb-8 space-y-3">
-      <h2 className="text-lg font-semibold">კვირა {pj.week}: მატჩების შანსები</h2>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        {games.map((g) => {
-          const h = team(g.h);
-          const a = team(g.a);
-          const p = projectedWin(data, g.h, g.a) ?? 0.5;
-          return (
-            <Card key={`${g.h}-${g.a}`} className="p-4">
-              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                {[
-                  [g.h, h, p],
-                  [g.a, a, 1 - p],
-                ].map(([n, t, pr], i) => (
-                  <div key={n as string} className={cn("flex min-w-0 items-center gap-2", i === 1 && "order-3 flex-row-reverse text-right")}>
-                    <TeamAvatar name={n as string} size={34} />
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">{clean(n as string)}</div>
-                      <div className="text-[11px] text-muted-foreground tabular">
-                        {t ? `${fmt(Math.round((t as { so_far: number }).so_far))} → ${fmt(Math.round((t as { final: number }).final))}` : "-"}
-                      </div>
-                    </div>
-                    <div
-                      className={cn(
-                        "ml-auto text-xl font-bold tabular",
-                        i === 1 && "ml-0 mr-auto",
-                        (pr as number) >= 0.5 ? "text-foreground" : "text-muted-foreground",
-                      )}
-                    >
-                      {pct(pr as number)}
-                    </div>
-                  </div>
-                ))}
-                <span className="order-2 text-[11px] text-muted-foreground">VS</span>
-              </div>
-              <div className="mt-3 flex h-1.5 overflow-hidden rounded-full bg-white/10">
-                <div className="bg-[hsl(var(--red))] transition-all duration-700" style={{ width: `${p * 100}%` }} />
-                <div className="flex-1 bg-[hsl(var(--blue))]" />
-              </div>
-              <div className="mt-2 flex justify-between text-[11px] text-muted-foreground">
-                <span>{h ? `${h.games_left} თამაში დარჩა` : ""}</span>
-                <span>{a ? `${a.games_left} თამაში დარჩა` : ""}</span>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-export default function Odds() {
+/** ანალიტიკის ჩანართი: სეზონის შანსები (პლეი-ოფი, ფინალი, ჩემპიონობა) */
+export default function SeasonOdds() {
   const data = useData();
   const odds = useMemo(() => playoffOdds(data), [data]);
   const teamIds = useMemo(() => new Map(data.managers.map((m) => [key(m.team), m.tid])), [data.managers]);
@@ -124,21 +64,16 @@ export default function Odds() {
 
   return (
     <>
-      <PageHeader
-        title={`შანსები · ${data.current.label}`}
-        description={`${data.current.label}: ვინ გავა პლეი-ოფში, ფინალში და ვის აქვს ჩემპიონობის საუკეთესო შანსი. ითვლება დარჩენილი კალენდრის 6 000 სიმულაციით, თითო გუნდის მოთამაშეების მიხედვით.`}
-      >
-        <div className="flex flex-wrap items-center gap-3">
-          <Updated at={data.updated_at} />
-          <ShareButton
-            title={`WCF შანსები · ${data.current.label}`}
-            text={odds
-              .slice(0, 3)
-              .map((o, i) => `${i + 1}. ${clean(o.name)}: ჩემპიონობა ${pct(o.title)}`)
-              .join("\n")}
-          />
-        </div>
-      </PageHeader>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">სეზონის შანსები</h2>
+        <ShareButton
+          title={`WCF შანსები · ${data.current.label}`}
+          text={odds
+            .slice(0, 3)
+            .map((o, i) => `${i + 1}. ${clean(o.name)}: ჩემპიონობა ${pct(o.title)}`)
+            .join("\n")}
+        />
+      </div>
 
       <Card className="mb-5">
         <CardContent className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4 text-sm text-muted-foreground">
@@ -152,9 +87,6 @@ export default function Odds() {
         </CardContent>
       </Card>
 
-      <WeekMatchups />
-
-      <h2 className="mb-3 text-lg font-semibold">სეზონის შანსები</h2>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {odds.map((row, index) => {
           const tid = teamIds.get(key(row.name));

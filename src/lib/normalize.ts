@@ -1,4 +1,4 @@
-import type { LeagueData, LiveData, LivePlayer, LiveTeam, RosterPlayer, WaiverPlayer } from "@/types";
+import type { LeagueData, LiveData, LivePlayer, LiveTeam, PlayerCard, RosterPlayer, WaiverPlayer } from "@/types";
 
 /** სერვერის ძველი პასუხიც (CDN-ის ქეში, ან ლოკალური სერვერი, რომელიც კოდის განახლებამდე ჩაირთო)
  *  რომ არ ამტვრევდეს გვერდს: აკლებულ ველებს გონივრულ ნაგულისხმევ მნიშვნელობებს ვუწერთ. */
@@ -35,6 +35,10 @@ export function normalizeLeague(d: LeagueData): LeagueData {
     waivers: (d.waivers ?? []).map((w) => player(w as WaiverPlayer)),
     current_draft: d.current_draft ?? [],
     projections: d.projections ?? null,
+    current: { ...d.current, schedule: d.current?.schedule ?? [] },
+    seasons: d.seasons ?? [],
+    trades: d.trades ? { current: d.trades.current ?? [], past: d.trades.past ?? [] } : undefined,
+    activity: d.activity ?? [],
   };
 }
 
@@ -68,9 +72,31 @@ function liveTeam(t: LiveTeam): LiveTeam {
     win: t.win ?? null,
     starters: (t.starters ?? []).map(livePlayer),
     bench: (t.bench ?? []).map(livePlayer),
+    departed: t.departed ?? [],
   };
 }
 
 export function normalizeLive(d: LiveData): LiveData {
   return { ...d, today: num(d.today), days: d.days ?? [], matchups: (d.matchups ?? []).map((m) => ({ home: liveTeam(m.home), away: liveTeam(m.away) })) };
+}
+
+/** მოთამაშის გვერდი: ძველ (ქეშირებულ) პასუხს ახალი ველები შეიძლება აკლდეს */
+export function normalizePlayer(d: PlayerCard): PlayerCard {
+  const season = d.season ?? ({} as PlayerCard["season"]);
+  return {
+    ...d,
+    jersey: d.jersey ?? null,
+    pos_rank: d.pos_rank ?? null,
+    owned: d.owned ?? null,
+    adp: d.adp ?? null,
+    outlook: d.outlook ?? null,
+    projection: d.projection ?? null,
+    last_season: d.last_season ?? null,
+    owner: d.owner ?? null,
+    season: { ...season, label: season.label ?? "", gp: num(season.gp), total: num(season.total), avg: num(season.avg), projected_avg: num(season.projected_avg), per_game: num(season.per_game), line: season.line ?? null },
+    games: d.games ?? [],
+    upcoming: d.upcoming ?? [],
+    drafts: d.drafts ?? [],
+    news: d.news ?? [],
+  };
 }

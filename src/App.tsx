@@ -41,11 +41,11 @@ const TeamProfile = page(() => import("@/pages/TeamProfile"));
 const Player = page(() => import("@/pages/Player"));
 const Recap = page(() => import("@/pages/Recap"));
 const Trophies = page(() => import("@/pages/Trophies"));
-const Odds = page(() => import("@/pages/Odds"));
 const Analytics = page(() => import("@/pages/Analytics"));
 const DraftGrades = page(() => import("@/pages/DraftGrades"));
 const Stats = page(() => import("@/pages/Stats"));
 import SubNav from "@/components/layout/SubNav";
+import { InstallBanner } from "@/components/layout/InstallApp";
 import ErrorBoundary from "@/components/layout/ErrorBoundary";
 
 /** შეცდომის ჩარჩო, რომელიც გვერდის შეცვლისას თავიდან ცდის */
@@ -130,7 +130,7 @@ export default function App() {
               <Route path="/announcements" element={<Announcements />} />
               <Route path="/team/:tid" element={<TeamProfile />} />
               <Route path="/player/:pid" element={<Player />} />
-              <Route path="/odds" element={<Odds />} />
+              <Route path="/odds" element={<Navigate to="/analytics?tab=odds" replace />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/draft-grades" element={<DraftGrades />} />
               <Route path="/stats" element={<Stats />} />
@@ -143,6 +143,7 @@ export default function App() {
             </RouteErrorBoundary>
           </main>
           <Footer league={state.data.league} updated={state.data.updated} />
+          <InstallBanner />
         </LeagueProvider>
       )}
     </BrowserRouter>

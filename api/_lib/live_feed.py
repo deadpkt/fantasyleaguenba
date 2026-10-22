@@ -94,11 +94,22 @@ def build(league):
     day_boxes = league.box_scores(matchup_total=False)
     is_points = bool(week_boxes) and hasattr(week_boxes[0], "home_score")
 
-    # დღევანდელი ხაზები pid-ით
-    day = {}
+    # დღევანდელი ხაზები pid-ით. დღის lineup = გუნდის ახლანდელი როსტერი (ტრეიდის შემდეგაც სწორი);
+    # კვირის lineup-ში კი მხოლოდ ისინი არიან, ვისაც ამ კვირაში ამ გუნდისთვის უკვე უთამაშია.
+    day, day_team, week = {}, {}, {}
     for b in day_boxes:
-        for p in list(b.home_lineup or []) + list(b.away_lineup or []):
-            day[p.playerId] = p
+        for side in ("home", "away"):
+            lineup = list(getattr(b, f"{side}_lineup", None) or [])
+            tid = getattr(getattr(b, f"{side}_team", None), "team_id", None)
+            if tid is not None and lineup:
+                day_team[tid] = lineup
+            for p in lineup:
+                day[p.playerId] = p
+    for b in week_boxes:
+        for side in ("home", "away"):
+            tid = getattr(getattr(b, f"{side}_team", None), "team_id", None)
+            for p in getattr(b, f"{side}_lineup", None) or []:
+                week[(tid, p.playerId)] = p
 
     live_scores, played_today = {}, {}
     for b in week_boxes:
@@ -114,8 +125,9 @@ def build(league):
     lo, hi = pickem_core.bounds(period)
     week_days = range(lo, hi + 1)
 
-    def player(p):
+    def player(p, tid):
         d = day.get(p.playerId)
+        w = week.get((tid, p.playerId))
         dline = _line(d) if d else None
         opp = getattr(d, "pro_opponent", None) if d else None
         has_game = opp not in (None, "None")
@@ -136,16 +148,23 @@ def build(league):
             "status": status, "tip": _tip(p, today) if has_game else None,
             "today": round(float(getattr(d, "points", 0) or 0), 1) if d else 0,
             "today_line": dline if status in ("final", "live") else None,
-            "points": round(float(getattr(p, "points", 0) or 0), 1),
-            "week_line": _line(p),
+            "points": round(float(getattr(w, "points", 0) or 0), 1) if w else 0,
+            "week_line": _line(w) if w else None,
             "per_game": pj.get("per_game", 0), "week_left": pj.get("week_left", 0), "week_games": pj.get("week_games", 0),
             "games": _week_games(p, week_days),
             # ძველი ველი (თავსებადობისთვის)
             "played": status == "final",
         }
 
-    def team(t, score, espn_proj, lineup):
-        players = [player(p) for p in lineup]
+    def team(t, score, espn_proj):
+        tid = getattr(t, "team_id", None)
+        # ახლანდელი როსტერი: დღის lineup, თუ ჯერ არ არის, ESPN-ის roster
+        lineup = day_team.get(tid) or getattr(t, "roster", None) or []
+        players = [player(p, tid) for p in lineup]
+        now = {p["pid"] for p in players}
+        # ვინც ამ კვირაში ამ გუნდისთვის ითამაშა და მერე ტრეიდით/გაშვებით წავიდა (ქულა გუნდს რჩება)
+        departed = [{"name": p.name, "pid": p.playerId, "points": round(float(getattr(p, "points", 0) or 0), 1)}
+                    for (wt, pid), p in week.items() if wt == tid and pid not in now and getattr(p, "points", 0)]
         starters = sorted([p for p in players if p["slot"] not in BENCH], key=lambda p: (-p["today"], -p["points"]))
         bench = sorted([p for p in players if p["slot"] in BENCH], key=lambda p: -p["points"])
         pt = proj["teams"].get(getattr(t, "team_id", None), {})
@@ -158,22 +177,19 @@ def build(league):
             "projected": pt.get("final") if pt else espn,
             "espn_projected": espn,
             "remaining": pt.get("remaining"), "games_left": pt.get("games_left"), "sd": pt.get("sd"),
-            "starters": starters, "bench": bench,
+            "starters": starters, "bench": bench, "departed": departed,
         }
 
     matchups = []
     for b in week_boxes:
         if not getattr(b.home_team, "team_name", None) or not getattr(b.away_team, "team_name", None):
             continue
-        # დრაფტის შემდეგ, პირველ სათამაშო დღემდე ESPN lineup-ს ცარიელს აბრუნებს — მაშინ roster
-        hl = b.home_lineup or getattr(b.home_team, "roster", None) or []
-        al = b.away_lineup or getattr(b.away_team, "roster", None) or []
         if is_points:
-            home = team(b.home_team, b.home_score, b.home_projected, hl)
-            away = team(b.away_team, b.away_score, b.away_projected, al)
+            home = team(b.home_team, b.home_score, b.home_projected)
+            away = team(b.away_team, b.away_score, b.away_projected)
         else:
-            home = team(b.home_team, b.home_wins, None, hl)
-            away = team(b.away_team, b.away_wins, None, al)
+            home = team(b.home_team, b.home_wins, None)
+            away = team(b.away_team, b.away_wins, None)
         ph, pa = proj["teams"].get(home["tid"]), proj["teams"].get(away["tid"])
         home["win"] = round(PJ.win_prob(ph, pa), 3) if ph and pa else None
         away["win"] = round(1 - home["win"], 3) if home["win"] is not None else None

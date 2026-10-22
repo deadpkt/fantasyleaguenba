@@ -13,7 +13,6 @@ import {
   Megaphone,
   Menu,
   Radio,
-  Percent,
   Swords,
   Table2,
   Trophy,
@@ -26,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import type { LeagueData } from "@/types";
 import NotificationBell from "@/components/league/NotificationBell";
+import { InstallMenuItem } from "@/components/layout/InstallApp";
 
 export type Page = { to: string; label: string; icon: LucideIcon };
 type Section = { label: string; icon: LucideIcon; pages: Page[]; also?: string[] };
@@ -40,7 +40,6 @@ export const SECTIONS: Section[] = [
     pages: [
       { to: "/standings", label: "ცხრილი", icon: Table2 },
       { to: "/stats", label: "სტატისტიკა", icon: Activity },
-      { to: "/odds", label: "შანსები", icon: Percent },
       { to: "/analytics", label: "ანალიტიკა", icon: BarChart3 },
       { to: "/draft-grades", label: "Draft Grades", icon: Medal },
       { to: "/recap", label: "კვირის რეპორტაჟი", icon: Clapperboard },
@@ -309,7 +308,10 @@ export default function SiteHeader({ league, season, data }: { league: string; s
                     </div>
                   ))}
                 </nav>
-                <div className="border-t border-white/10 p-5 text-xs text-muted-foreground">მონაცემები: ESPN Fantasy · ახლდება ავტომატურად</div>
+                <div className="space-y-4 border-t border-white/10 p-5">
+                  <InstallMenuItem />
+                  <div className="text-xs text-muted-foreground">მონაცემები: ESPN Fantasy · ახლდება ავტომატურად</div>
+                </div>
               </SheetContent>
             </Sheet>
           </div>

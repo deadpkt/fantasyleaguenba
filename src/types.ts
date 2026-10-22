@@ -174,6 +174,19 @@ export interface LeagueData {
   current_draft: CurrentDraftPick[];
   settings: LeagueSettings | null;
   trades?: Trades;
+  /** ESPN-ის აქტივობა: აყვანა, გაშვება, ტრეიდი (უახლესი პირველი) */
+  activity?: LeagueActivity[];
+}
+
+export interface LeagueActivity {
+  id: string;
+  kind: "add" | "waiver" | "drop" | "trade" | "trade_review";
+  date: string;
+  team?: string;
+  tid?: number;
+  added?: { name: string; pid: number }[];
+  dropped?: { name: string; pid: number }[];
+  sides?: TradeSide[];
 }
 
 export interface CurrentDraftPick {
@@ -349,7 +362,16 @@ export interface PlayerCard {
     per_game: number;
     line: Record<string, number> | null;
   };
-  last_season: { season: string; total: number; avg: number; gp: number } | null;
+  last_season: { season: string; total: number; avg: number; gp: number; line?: Record<string, number> | null } | null;
+  jersey: string | null;
+  pos_rank: number | null;
+  /** რამდენ % ESPN ლიგაში ჰყავთ */
+  owned: number | null;
+  /** საშუალო დრაფტის პიკი ESPN-ზე */
+  adp: number | null;
+  outlook: string | null;
+  news: { date: string | null; headline: string; story: string }[];
+  projection: { avg: number; total: number; line: Record<string, number> | null } | null;
   games: { sp: number; date: string | null; opp: string | null; fpts: number; line: StatLine }[];
   upcoming: { sp: number; date: string | null; opp: string | null }[];
   drafts: { season: string; team: string; round: number; pick: number; n: number; total: number | null; avg: number | null; rank: number | null }[];
@@ -380,6 +402,8 @@ export interface LiveTeam {
   win: number | null;
   starters: LivePlayer[];
   bench: LivePlayer[];
+  /** ამ კვირაში ითამაშა გუნდისთვის, მერე წავიდა (ტრეიდი/გაშვება): ქულა გუნდს რჩება */
+  departed?: { name: string; pid: number; points: number }[];
 }
 
 export interface LiveData {

@@ -101,7 +101,7 @@ function TeamStack({ names }: { names: string[] }) {
 
 /** ბოლო განცხადებები — მიმაგრებული ზემოთ, მერე ახალი */
 function RecentAnnouncements() {
-  const { state } = useApi<AnnouncementsData>("/api/announcements");
+  const { state } = useApi<AnnouncementsData>("/api/announcements", 60_000);
   if (state.status !== "ready" || !state.data.items.length) return null;
   const items = state.data.items;
   const featured = items.find((x) => x.pinned) ?? items[0];

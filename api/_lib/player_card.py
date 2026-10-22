@@ -40,25 +40,41 @@ def _drafts(league, pid):
     return out
 
 
-def _last_season(league, pid):
-    """წინა სეზონის ჯამი პირდაპირ ESPN-იდან (espn-api მხოლოდ მიმდინარე სეზონს არჩევს)."""
+def _line_avg(avg, keys=AVG):
+    """საშუალოები თამაშზე (FG%/FT% ათწილადით)."""
+    if not avg:
+        return None
+    return {k: round(float(avg.get(k, 0) or 0), 3 if "%" in k else 1) for k in keys}
+
+
+def _card(league, pid):
+    """ESPN-ის მოთამაშის ბარათი პირდაპირ: წინა სეზონი, ფლობის %, ADP, ნომერი, სეზონის შეფასება.
+    (espn-api ამათ არ არჩევს, ამიტომ თვითონ ვკითხულობთ)."""
     prev = league.year - 1
+    out = {"last_season": None, "owned": None, "adp": None, "jersey": None, "outlook": None}
     try:
+        from espn_api.basketball.constant import STATS_MAP
         raw = league.espn_request.get_player_card([pid], league.finalScoringPeriod, [f"00{prev}"])
         player = (raw.get("players") or [{}])[0]
         player = player.get("player", player)
+        own = player.get("ownership") or {}
+        out["owned"] = round(own["percentOwned"], 1) if own.get("percentOwned") is not None else None
+        out["adp"] = round(own["averageDraftPosition"], 1) if own.get("averageDraftPosition") else None
+        out["jersey"] = player.get("jersey") or None
+        out["outlook"] = (player.get("seasonOutlook") or "").strip() or None
         for split in player.get("stats", []):
             if split.get("seasonId") == prev and split.get("id") == f"00{prev}" and split.get("statSourceId") == 0:
                 gp = float((split.get("stats") or {}).get("42", 0) or 0)
-                return {"season": H.season_label(prev), "total": round(split.get("appliedTotal", 0)),
-                        "avg": round(split.get("appliedAverage", 0), 1), "gp": int(gp)}
+                avg = {STATS_MAP.get(k, k): v for k, v in (split.get("averageStats") or {}).items()}
+                out["last_season"] = {"season": H.season_label(prev), "total": round(split.get("appliedTotal", 0)),
+                                      "avg": round(split.get("appliedAverage", 0), 1), "gp": int(gp), "line": _line_avg(avg)}
     except Exception:
         pass
-    return None
+    return out
 
 
 def build(league, pid):
-    p = league.player_info(playerId=pid)
+    p = league.player_info(playerId=pid, include_news=True)
     if not p:
         return None
     today = max(1, int(getattr(league, "scoringPeriodId", 0) or 1))
@@ -81,8 +97,16 @@ def build(league, pid):
         key=lambda g: g["sp"],
     )[:7]
     inj = getattr(p, "injuryStatus", None)
+    card = _card(league, pid)
+    proj = p.stats.get(f"{league.year}_projected") or {}
+    news = [{"date": n.get("published"), "headline": n.get("headline", ""), "story": (n.get("story") or "")[:600]}
+            for n in (p.news or [])[:4] if n.get("headline")]
     return {
         "pid": pid, "name": p.name, "pro": p.proTeam, "pos": p.position,
+        "jersey": card["jersey"], "pos_rank": getattr(p, "posRank", None) or None,
+        "owned": card["owned"], "adp": card["adp"], "outlook": card["outlook"], "news": news,
+        "projection": {"avg": round(float(proj.get("applied_avg") or 0), 1), "total": round(float(proj.get("applied_total") or 0)),
+                       "line": _line_avg(proj.get("avg"))} if proj else None,
         "injury": inj if inj not in (None, "ACTIVE", "NORMAL") else None,
         "return": p.expected_return_date.isoformat() if getattr(p, "expected_return_date", None) else None,
         "owner": _owner(league, pid),
@@ -92,7 +116,7 @@ def build(league, pid):
             "projected_avg": round(float(p.projected_avg_points or 0), 1), "per_game": round(PJ.per_game(p), 1),
             "line": {s: round(float(avg.get(s, 0) or 0), 3 if "%" in s else 1) for s in AVG} if avg else None,
         },
-        "last_season": _last_season(league, pid),
+        "last_season": card["last_season"],
         "games": games,
         "upcoming": upcoming,
         "drafts": _drafts(league, pid),

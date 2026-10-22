@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ArrowLeftRight, CalendarDays, Plus, Search, Sparkles, UserPlus, X } from "lucide-react";
 import { useData } from "@/lib/league";
 import { clean, fmt } from "@/lib/format";
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import PageHeader from "@/components/layout/PageHeader";
 import { PlayerPhoto, TeamAvatar } from "@/components/league/team";
 import Updated from "@/components/league/Updated";
+import SeasonOdds from "@/pages/Odds";
 
 const percent = (n: number) => `${Math.round(n * 100)}%`;
 const injuryLabel = (s: string | null) => (s ? s.replace(/_/g, " ") : "");
@@ -391,24 +393,56 @@ function TradeAnalyzer() {
   );
 }
 
+const TABS = [
+  ["week", "ამ კვირა"],
+  ["odds", "სეზონის შანსები"],
+  ["waivers", "თავისუფალი აგენტები"],
+  ["trade", "ტრეიდი"],
+] as const;
+type Tab = (typeof TABS)[number][0];
+
 export default function Analytics() {
   const data = useData();
+  // ჩანართი ბმულშია (?tab=odds), რომ გაზიარება და ძველი /odds ბმული სწორ ადგილას მიდიოდეს
+  const [params, setParams] = useSearchParams();
+  const tab: Tab = TABS.some(([id]) => id === params.get("tab")) ? (params.get("tab") as Tab) : "week";
   return (
     <>
-      <PageHeader title="ანალიტიკა" description="მატჩების პროგნოზი, დარჩენილი თამაშები, თავისუფალი აგენტები და ტრეიდების შეფასება. ყველაფერი ESPN-ის მიმდინარე მონაცემებით.">
+      <PageHeader title="ანალიტიკა" description="მატჩების პროგნოზი, სეზონის შანსები, თავისუფალი აგენტები და ტრეიდების შეფასება. ყველაფერი ESPN-ის მიმდინარე მონაცემებით.">
         <Updated at={data.updated_at} />
       </PageHeader>
-      <div className="space-y-10">
-        {data.projections ? (
-          <>
-            <MatchupPreview />
-            <GamesLeft />
-          </>
-        ) : (
-          <p className="text-sm text-muted-foreground">პროგნოზი ჯერ არ არის ხელმისაწვდომი.</p>
+      <div role="tablist" className="-mt-2 mb-6 flex gap-1 overflow-x-auto border-b border-white/[0.08] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {TABS.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => setParams(id === "week" ? {} : { tab: id }, { replace: true })}
+            className={cn("relative whitespace-nowrap px-3 py-2.5 text-sm transition-colors", tab === id ? "text-foreground" : "text-muted-foreground hover:text-foreground")}
+          >
+            {label}
+            {tab === id && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-foreground" />}
+          </button>
+        ))}
+      </div>
+      <div key={tab} className="page-in space-y-10">
+        {tab === "week" &&
+          (data.projections ? (
+            <>
+              <MatchupPreview />
+              <GamesLeft />
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">პროგნოზი ჯერ არ არის ხელმისაწვდომი.</p>
+          ))}
+        {tab === "odds" && (
+          <div>
+            <SeasonOdds />
+          </div>
         )}
-        <WaiverWatch />
-        <TradeAnalyzer />
+        {tab === "waivers" && <WaiverWatch />}
+        {tab === "trade" && <TradeAnalyzer />}
       </div>
     </>
   );
