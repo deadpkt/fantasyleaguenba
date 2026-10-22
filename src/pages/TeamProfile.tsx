@@ -1,18 +1,18 @@
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { ArrowLeftRight, Award, CalendarRange, Crown, Lock, Shirt, Swords, TrendingUp } from "lucide-react";
 import { useData } from "@/lib/league";
-import { clean, plain } from "@/lib/format";
+import { clean, fmt, plain } from "@/lib/format";
 import { espnImage } from "@/lib/logos";
 import { NBA, nbaLogo } from "@/lib/nba";
 import { cn } from "@/lib/utils";
+import { projectedWin } from "@/lib/season";
 import { achievements, type Achievement } from "@/lib/badges";
 import { LORE, type Lore } from "@/data/lore";
 import Connections from "@/components/league/Connections";
 import type { Manager } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { PlayerPhoto, TeamAvatar } from "@/components/league/team";
 import { CountUp } from "@/components/league/CountUp";
 
@@ -32,21 +32,12 @@ function Photo({ m, size }: { m: Manager; size: number }) {
   );
 }
 
-function Stat({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 backdrop-blur-sm">
-      <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className="mt-0.5 text-xl font-bold tabular sm:text-2xl">{children}</div>
-    </div>
-  );
-}
-
 function Section({ icon, title, sub, children, className }: { icon: ReactNode; title: string; sub?: string; children: ReactNode; className?: string }) {
   return (
     <Card className={className}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <span className="text-orange-300">{icon}</span> {title}
+          <span className="text-muted-foreground">{icon}</span> {title}
         </CardTitle>
         {sub && <CardDescription>{sub}</CardDescription>}
       </CardHeader>
@@ -70,13 +61,11 @@ function BadgeTile({ b, i }: { b: Achievement; i: number }) {
       title={b.desc}
       className={cn(
         "badge-in group/b relative flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition-all duration-300",
-        b.earned
-          ? "border-[hsl(var(--c)/0.35)] bg-[hsl(var(--c)/0.08)] hover:-translate-y-1 hover:shadow-[0_12px_30px_-12px_hsl(var(--c)/0.7)]"
-          : "border-white/[0.06] bg-white/[0.02]",
+        b.earned ? "border-[hsl(var(--c)/0.3)] bg-white/[0.03] hover:border-[hsl(var(--c)/0.6)]" : "border-white/[0.06] bg-transparent",
       )}
       style={{ ["--c" as string]: TIER[b.tier], animationDelay: `${i * 45}ms` }}
     >
-      <span className={cn("text-3xl transition-transform duration-300", b.earned ? "group-hover/b:scale-125 group-hover/b:-rotate-6" : "opacity-25 grayscale")}>
+      <span className={cn("text-3xl", !b.earned && "opacity-25 grayscale")}>
         {b.icon}
       </span>
       <span className={cn("text-xs font-medium leading-tight", !b.earned && "text-muted-foreground/60")}>{b.name}</span>
@@ -88,20 +77,20 @@ function BadgeTile({ b, i }: { b: Achievement; i: number }) {
 
 /** გუნდის ისტორია და წარმოსახვითი ფანბეისი */
 function Story({ lore, c1, left, right }: { lore: Lore; c1: string; left?: ReactNode; right?: ReactNode }) {
-  const rows: [string, string, string][] = [
-    ["📣", "სიმღერა", lore.fans.chant],
-    ["🐾", "მასკოტი", lore.fans.mascot],
-    ["🏟️", "არენა", lore.fans.arena],
-    ["⚔️", "მთავარი მეტოქე", lore.fans.rival],
-    ["🕯️", "რიტუალი", lore.fans.ritual],
+  const rows: [string, string][] = [
+    ["სიმღერა", lore.fans.chant],
+    ["მასკოტი", lore.fans.mascot],
+    ["არენა", lore.fans.arena],
+    ["მთავარი მეტოქე", lore.fans.rival],
+    ["რიტუალი", lore.fans.ritual],
   ];
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr_1fr] lg:items-start">
       <div className="space-y-6">
         <Card className="overflow-hidden">
-          <div className="absolute inset-y-0 left-0 w-1" style={{ background: c1 }} />
+          <div className="absolute inset-y-0 left-0 w-0.5" style={{ background: c1 }} />
           <CardContent className="space-y-4 p-5 sm:p-7">
-            <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">📖 ისტორია</div>
+            <div className="text-xs text-muted-foreground">ისტორია</div>
             <p className="text-xl font-semibold italic leading-snug sm:text-2xl">„{lore.tagline}“</p>
             <p className="leading-relaxed text-muted-foreground">{lore.story}</p>
           </CardContent>
@@ -109,25 +98,22 @@ function Story({ lore, c1, left, right }: { lore: Lore; c1: string; left?: React
         {left}
       </div>
       <div className="space-y-6">
-        <Card className="overflow-hidden" style={{ background: `radial-gradient(120% 100% at 100% 0%, ${c1}26, transparent 60%), hsl(var(--card) / 0.9)` }}>
+        <Card className="overflow-hidden">
           <CardContent className="space-y-4 p-5 sm:p-6">
             <div>
-              <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">👥 ფანბეისი</div>
+              <div className="text-xs text-muted-foreground">ფანბეისი</div>
               <div className="mt-1 text-2xl font-bold tracking-tight">{lore.fans.name}</div>
-              <div className="mt-0.5 text-sm text-orange-200/80">{lore.fans.size}</div>
+              <div className="mt-0.5 text-sm text-muted-foreground">{lore.fans.size}</div>
             </div>
             <p className="text-sm text-muted-foreground">{lore.fans.vibe}</p>
-            <div className="space-y-2">
-              {rows.map(([icon, label, text]) => (
-                <div key={label} className="flex gap-3 rounded-lg border border-white/[0.06] bg-black/20 px-3 py-2 text-sm">
-                  <span className="text-base">{icon}</span>
-                  <div className="min-w-0">
-                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</div>
-                    <div>{text}</div>
-                  </div>
+            <dl className="divide-y divide-white/[0.06] border-y border-white/[0.06]">
+              {rows.map(([label, text]) => (
+                <div key={label} className="grid grid-cols-[120px_1fr] gap-3 py-2.5 text-sm">
+                  <dt className="text-muted-foreground">{label}</dt>
+                  <dd>{text}</dd>
                 </div>
               ))}
-            </div>
+            </dl>
             <p className="text-[11px] text-muted-foreground/70">* გამოგონილია, გასართობად.</p>
           </CardContent>
         </Card>
@@ -152,9 +138,19 @@ function FanBackdrop({ fan, c1, c2 }: { fan: string; c1: string; c2: string }) {
   );
 }
 
+type Tab = "overview" | "story" | "rivals" | "badges";
+const TABS: [Tab, string][] = [
+  ["overview", "მიმოხილვა"],
+  ["story", "ისტორია"],
+  ["rivals", "მეტოქეები"],
+  ["badges", "მიღწევები"],
+];
+
 export default function TeamProfile() {
   const { tid } = useParams();
   const data = useData();
+  const [tab, setTab] = useState<Tab>("overview");
+  useEffect(() => setTab("overview"), [tid]);
   const m = data.managers.find((x) => String(x.tid) === tid);
   if (!m) return <Navigate to="/managers" replace />;
 
@@ -165,10 +161,18 @@ export default function TeamProfile() {
   const cur = data.current.standings[rank - 1];
   const at = data.alltime.find((r) => same(r.team, m.team));
 
-  // ბოლო დასრულებული სეზონის კვირები
-  const last = data.seasons.find((s) => s.complete);
-  const weekly = last?.weekly.teams.find((t) => m.seasons.some((s) => s.season === last.label && same(s.team, t.name)) || same(t.name, m.team));
-  const cells = weekly?.scores ?? [];
+  // კვირების გრაფიკი: მიმდინარე სეზონი (თუ კვირები უკვე დასრულდა), თორემ ბოლო დასრულებული
+  const curGames = data.current.schedule.filter((g) => g.done && (same(g.h, m.team) || same(g.a, m.team))).sort((a, b) => a.p - b.p);
+  const lastDone = data.seasons.find((s) => s.complete);
+  const last = curGames.length ? { label: data.current.label } : lastDone;
+  const weekly = lastDone?.weekly.teams.find((t) => m.seasons.some((s) => s.season === lastDone.label && same(s.team, t.name)) || same(t.name, m.team));
+  const cells: ([number, 0 | 1 | 2] | null)[] = curGames.length
+    ? curGames.map((g) => {
+        const mine = same(g.h, m.team) ? g.hs : g.as;
+        const opp = same(g.h, m.team) ? g.as : g.hs;
+        return [mine, mine > opp ? 1 : mine < opp ? 0 : 2];
+      })
+    : (weekly?.scores ?? []);
   const vals = cells.map((c) => (c ? c[0] : 0));
   const max = Math.max(1, ...vals);
   const min = Math.min(...vals.filter(Boolean), max);
@@ -189,252 +193,308 @@ export default function TeamProfile() {
   const badges = achievements(data, m);
   const earned = badges.filter((b) => b.earned).length;
 
+  // ამ კვირის მატჩი
+  const week = data.projections?.week ?? data.current.week;
+  const game = data.current.schedule.find((g) => g.p === week && (same(g.h, m.team) || same(g.a, m.team)));
+  const opp = game ? (same(game.h, m.team) ? game.a : game.h) : null;
+  const pj = (n: string) => Object.entries(data.projections?.teams ?? {}).find(([k]) => same(k, n))?.[1];
+  const mine = pj(m.team);
+  const theirs = opp ? pj(opp) : undefined;
+  const win = opp ? projectedWin(data, m.team, opp) : null;
+  const oppTid = opp ? data.managers.find((x) => same(x.team, opp))?.tid : undefined;
+  const seasonPts = m.roster.reduce((n, p) => n + (p.total ?? 0), 0);
+  const roster = [...m.roster].sort((a, b) => (b.total ?? 0) - (a.total ?? 0) || b.per_game - a.per_game);
+
   return (
     <div className="space-y-6 pb-4 pt-8 md:pt-12">
       {m.fan && <FanBackdrop key={m.fan} fan={m.fan} c1={c1} c2={c2} />}
+
       {/* ჰერო */}
-      <Card
-        className="overflow-hidden"
-        style={
-          {
-            borderColor: `${c1}55`,
-            background: `radial-gradient(120% 120% at 100% 0%, ${c1}40, transparent 55%), radial-gradient(80% 90% at 0% 100%, ${c2}22, transparent 60%), linear-gradient(180deg, hsl(var(--card) / 0.92), hsl(var(--card) / 0.86))`,
-          } as CSSProperties
-        }
-      >
-        <div className="absolute inset-x-0 top-0 h-[3px]" style={{ background: `linear-gradient(90deg, ${c1}, ${c2})` }} />
-        {m.fan && (
-          <img
-            src={nbaLogo(m.fan)}
-            alt=""
-            aria-hidden
-            className="pointer-events-none absolute -right-10 -top-10 h-72 w-72 rotate-[-8deg] object-contain opacity-[0.1]"
-          />
-        )}
-        <CardContent className="relative space-y-6 p-5 sm:p-8">
+      <section className="hero-in overflow-hidden rounded-2xl border border-white/[0.08] bg-card/95">
+        {/* გუნდის ფერები: ორი სუფთა ზოლი */}
+        <div className="flex h-1">
+          <div className="flex-[3]" style={{ background: c1 }} />
+          <div className="flex-[2]" style={{ background: c2 }} />
+        </div>
+        <div className="space-y-6 p-5 sm:p-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-            <div
-              className="hero-in w-fit shrink-0 self-start rounded-[20px] p-[3px] sm:self-auto"
-              style={{
-                background: `conic-gradient(from 210deg, ${c2}, ${c1}, ${c2})`,
-              }}
-            >
-              <Photo m={m} size={112} />
+            <div className="shrink-0 self-start rounded-2xl border border-white/10 p-1 sm:self-auto">
+              <Photo m={m} size={96} />
             </div>
-            <div className="min-w-0 space-y-2">
-              <div className="hero-in flex flex-wrap items-center gap-2" style={{ animationDelay: "60ms" }}>
-                <Badge variant="outline" className="border-white/15 font-mono">
-                  {m.abbrev}
-                </Badge>
-                {m.rookie && <Badge variant="gold">Rookie</Badge>}
-                {m.titles > 0 && (
-                  <Badge variant="gold" className="gap-1">
-                    <Crown className="h-3 w-3" /> {m.titles}× ჩემპიონი
-                  </Badge>
+            <div className="min-w-0 flex-1 space-y-2">
+              <h1 className="break-words text-4xl font-semibold tracking-tight sm:text-5xl">{clean(m.team)}</h1>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                <span className="font-mono">{m.abbrev}</span>
+                {nba && (
+                  <span className="flex items-center gap-1.5">
+                    <img src={nbaLogo(m.fan!)} alt="" className="h-4 w-4 rounded-full bg-white object-contain p-[1px]" />
+                    {nba.name}
+                  </span>
                 )}
-                {rank > 0 && <Badge variant="secondary">#{rank} ცხრილში</Badge>}
+                {rank > 0 && <span>#{rank} ცხრილში</span>}
+                {m.titles > 0 && (
+                  <span className="flex items-center gap-1 text-gold">
+                    <Crown className="h-3.5 w-3.5" /> {m.titles}× ჩემპიონი
+                  </span>
+                )}
+                {m.rookie && <span className="text-gold">Rookie</span>}
               </div>
-              <h1 className="hero-in page-title break-words text-4xl font-extrabold tracking-tight sm:text-5xl" style={{ animationDelay: "100ms" }}>
-                {clean(m.team)}
-              </h1>
-              {nba && (
-                <div
-                  className="hero-in inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/30 py-0.5 pl-0.5 pr-2.5 text-xs text-muted-foreground"
-                  style={{ animationDelay: "140ms" }}
-                >
-                  <img src={nbaLogo(m.fan!)} alt="" className="h-5 w-5 rounded-full bg-white object-contain p-[1px]" />
-                  {nba.name} fan
-                </div>
-              )}
             </div>
             {m.ovr != null && (
-              <div
-                className="hero-in grid h-20 w-20 shrink-0 place-items-center rounded-2xl border border-white/10 bg-black/40 text-center backdrop-blur sm:ml-auto"
-                style={{ animationDelay: "180ms" }}
-              >
-                <div>
-                  <div className="text-3xl font-extrabold leading-none tabular">
-                    <CountUp value={m.ovr} />
-                  </div>
-                  <div className="mt-1 text-[10px] tracking-widest text-muted-foreground">OVR</div>
+              <div className="text-left sm:text-right">
+                <div className="text-4xl font-semibold leading-none tabular">
+                  <CountUp value={m.ovr} />
                 </div>
+                <div className="mt-1 text-xs text-muted-foreground">OVR რეიტინგი</div>
               </div>
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-            <Stat label="კარიერა">{m.rookie ? "-" : `${m.w}-${m.l}`}</Stat>
-            <Stat label="მოგება %">{at && at.w + at.l > 0 ? <CountUp value={at.pct * 100} decimals={1} suffix="%" /> : "-"}</Stat>
-            <Stat label="PPG">{m.ppg ? <CountUp value={m.ppg} /> : "-"}</Stat>
-            <Stat label="საუკეთესო კვირა">{m.best_week ? <CountUp value={m.best_week} /> : "-"}</Stat>
-            <Stat label="პლეიოფი">{m.rookie ? "-" : <CountUp value={m.playoffs} />}</Stat>
-            <Stat label={`${data.current.label}`}>{cur ? `${cur.w}-${cur.l}` : "-"}</Stat>
-          </div>
-        </CardContent>
-      </Card>
-
-      {LORE[m.tid] ? (
-        <Story lore={LORE[m.tid]} c1={c1} left={<Connections data={data} m={m} part="map" />} right={<Connections data={data} m={m} part="list" />} />
-      ) : (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
-          <Connections data={data} m={m} part="map" />
-          <Connections data={data} m={m} part="list" />
+          {/* სტატისტიკა ერთ ხაზზე */}
+          <dl className="grid grid-cols-2 gap-y-4 border-t border-white/[0.08] pt-5 sm:grid-cols-3 lg:grid-cols-6">
+            {(
+              [
+                [data.current.label, cur ? `${cur.w}-${cur.l}` : "-"],
+                ["ქულა სეზონში", seasonPts ? fmt(Math.round(seasonPts)) : "-"],
+                ["კარიერა", m.rookie ? "-" : `${m.w}-${m.l}`],
+                ["მოგება %", at && at.w + at.l > 0 ? `${(at.pct * 100).toFixed(1)}%` : "-"],
+                ["საუკეთესო კვირა", m.best_week ? fmt(m.best_week) : "-"],
+                ["პლეიოფი", m.rookie ? "-" : String(m.playoffs)],
+              ] as const
+            ).map(([label, value]) => (
+              <div key={label} className="border-l border-white/[0.08] pl-4">
+                <dt className="text-xs text-muted-foreground">{label}</dt>
+                <dd className="mt-1 text-2xl font-semibold tabular">{value}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
-      )}
+      </section>
 
-      {/* მიღწევები */}
-      <Section icon={<Award className="h-4 w-4" />} title="მიღწევები" sub={`${earned} / ${badges.length} მიღებული · მიიტანე მაუსი დეტალებისთვის`}>
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
-          {badges.map((b, i) => (
-            <BadgeTile key={b.id} b={b} i={i} />
-          ))}
-        </div>
-      </Section>
+      {/* ჩანართები */}
+      <div role="tablist" className="flex gap-1 overflow-x-auto border-b border-white/[0.08] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {TABS.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            className={cn("relative whitespace-nowrap px-3 py-2.5 text-sm transition-colors", tab === id ? "text-foreground" : "text-muted-foreground hover:text-foreground")}
+          >
+            {label}
+            {id === "badges" && <span className="ml-1.5 text-xs text-muted-foreground tabular">{earned}</span>}
+            {tab === id && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-foreground" />}
+          </button>
+        ))}
+      </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.3fr_1fr]">
-        <div className="space-y-6">
-          {/* როსტერი */}
-          <Section icon={<Shirt className="h-4 w-4" />} title="შემადგენლობა" sub={m.roster.length ? `${m.roster.length} მოთამაშე · საშუალო ქულით` : undefined}>
-            {m.roster.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-white/15 p-4 text-sm text-muted-foreground">როსტერი დრაფტის შემდეგ გამოჩნდება.</p>
-            ) : (
-              <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-                {m.roster.map((p) => (
-                  <div key={p.pid} className="flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-white/[0.04]">
-                    <PlayerPhoto pid={p.pid} className="h-10 w-10 shrink-0 rounded-full border bg-muted object-cover" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 truncate text-sm font-medium">
-                        {p.name}
-                        {p.injury && (
-                          <Badge variant="loss" className="px-1 py-0 text-[9px]">
-                            {p.injury.replace("_", " ")}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {p.pos} · {p.pro}
-                      </div>
-                    </div>
-                    <div className="text-right font-mono text-sm tabular">{p.avg || "-"}</div>
+      <div key={tab} className="page-in space-y-6">
+        {tab === "overview" && (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.5fr_1fr] lg:items-start">
+            {/* როსტერი */}
+            <Section
+              icon={<Shirt className="h-4 w-4" />}
+              title="შემადგენლობა"
+              sub={m.roster.length ? `${m.roster.length} მოთამაშე · ${data.current.label} სეზონის სტატისტიკა` : undefined}
+            >
+              {m.roster.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-white/15 p-4 text-sm text-muted-foreground">როსტერი დრაფტის შემდეგ გამოჩნდება.</p>
+              ) : (
+                <div className="-mx-2">
+                  <div className="grid grid-cols-[1fr_auto] gap-3 px-2 pb-2 text-[11px] text-muted-foreground sm:grid-cols-[1fr_44px_150px_64px]">
+                    <span>მოთამაშე</span>
+                    <span className="hidden text-right sm:block">თამ.</span>
+                    <span className="hidden text-right sm:block">PTS · REB · AST</span>
+                    <span className="text-right">ქულა</span>
                   </div>
-                ))}
-              </div>
-            )}
-          </Section>
-
-          {/* კვირები */}
-          {vals.length > 0 && last && (
-            <Section icon={<TrendingUp className="h-4 w-4" />} title={`${last.label}, კვირების მიხედვით`} sub="მწვანე = მოგება, წითელი = წაგება">
-              <div className="flex h-36 items-end gap-[3px]">
-                {cells.map((c, i) => (
-                  <div
-                    key={i}
-                    title={c ? `კვირა ${i + 1}: ${c[0]}` : ""}
-                    className={cn(
-                      "bar-grow flex-1 origin-bottom rounded-t-sm",
-                      !c ? "bg-white/5" : c[1] === 1 ? "bg-win/70" : c[1] === 0 ? "bg-loss/60" : "bg-white/30",
-                    )}
-                    style={{
-                      height: c ? `${12 + ((c[0] - min) / Math.max(1, max - min)) * 88}%` : "6%",
-                      animationDelay: `${150 + i * 30}ms`,
-                    }}
-                  />
-                ))}
-              </div>
-            </Section>
-          )}
-
-          {/* ტრეიდები */}
-          <Section icon={<ArrowLeftRight className="h-4 w-4" />} title="ტრეიდები ამ სეზონში">
-            {trades.length === 0 ? (
-              <p className="text-sm text-muted-foreground">ჯერ ტრეიდი არ ყოფილა.</p>
-            ) : (
-              <div className="space-y-2">
-                {trades.map((t, i) => (
-                  <div key={i} className="rounded-lg border border-white/10 p-3 text-sm">
-                    <div className="mb-1 text-xs text-muted-foreground">{t.date}</div>
-                    {t.sides.map((s, k) => (
-                      <div key={k}>
-                        <b>{clean(s.team)}</b> → {clean(s.to ?? "?")}: {s.gives.map((g) => g.name).join(", ")}
+                  <div className="divide-y divide-white/[0.05]">
+                    {roster.map((p) => (
+                      <div key={p.pid} className="grid grid-cols-[1fr_auto] items-center gap-3 px-2 py-2 sm:grid-cols-[1fr_44px_150px_64px]">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <PlayerPhoto pid={p.pid} className="h-9 w-9 shrink-0 rounded-full bg-muted object-cover" />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <Link to={`/player/${p.pid}`} className="truncate text-sm font-medium hover:underline">
+                                {p.name}
+                              </Link>
+                              {p.injury && <span className="shrink-0 rounded bg-loss/15 px-1 text-[9px] font-medium text-loss">{p.injury.replace(/_/g, " ")}</span>}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground">
+                              {p.pos} · {p.pro}
+                              {p.week_left > 0 && <span> · {p.week_left} თამ. ამ კვირაში</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <span className="hidden text-right text-sm text-muted-foreground tabular sm:block">{p.gp || "-"}</span>
+                        <span className="hidden text-right text-sm text-muted-foreground tabular sm:block">
+                          {p.season_line && p.gp ? `${p.season_line.PTS} · ${p.season_line.REB} · ${p.season_line.AST}` : "-"}
+                        </span>
+                        <div className="text-right">
+                          <div className="text-sm font-semibold tabular">{p.total ? fmt(p.total) : "-"}</div>
+                          <div className="text-[10px] text-muted-foreground tabular">{p.gp ? `${p.avg}/თამ.` : `პროგ. ${p.per_game}`}</div>
+                        </div>
                       </div>
                     ))}
                   </div>
-                ))}
-              </div>
-            )}
-          </Section>
-        </div>
+                </div>
+              )}
+            </Section>
 
-        <div className="space-y-6">
-          {/* H2H */}
-          <Section icon={<Swords className="h-4 w-4" />} title="Head to Head" sub="ყველა სეზონი, რეგულარული">
-            {rivals.length === 0 ? (
-              <p className="text-sm text-muted-foreground">ჯერ არცერთი შეხვედრა.</p>
-            ) : (
-              <div className="space-y-2">
-                {rivals.map((r) => {
-                  const pct = r.w / (r.w + r.l);
-                  const other = data.managers.find((x) => same(x.team, r.team) || x.seasons.some((z) => same(z.team, r.team)));
-                  return (
-                    <Link
-                      key={r.team}
-                      to={other ? `/team/${other.tid}` : "/h2h"}
-                      className="block rounded-lg px-1 py-1 transition-colors hover:bg-white/[0.04]"
-                    >
-                      <div className="flex items-center gap-2 text-sm">
-                        <TeamAvatar name={r.team} size={22} badge={false} />
-                        <span className="flex-1 truncate">{clean(r.team)}</span>
-                        <span className={cn("font-mono tabular", r.w > r.l ? "text-win" : r.w < r.l ? "text-loss" : "text-muted-foreground")}>
-                          {r.w}-{r.l}
+            <div className="space-y-6">
+              {/* ამ კვირის მატჩი */}
+              {opp && (
+                <Section icon={<Swords className="h-4 w-4" />} title={`კვირა ${week}`} sub="ამ კვირის მატჩი">
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                    <div className="min-w-0">
+                      <TeamAvatar name={m.team} size={36} badge={false} />
+                      <div className="mt-2 truncate text-sm font-medium">{clean(m.team)}</div>
+                      <div className="text-2xl font-semibold tabular">{mine ? fmt(Math.round(mine.so_far)) : "-"}</div>
+                    </div>
+                    <span className="text-xs text-muted-foreground">vs</span>
+                    <Link to={oppTid ? `/team/${oppTid}` : "/live"} className="min-w-0 text-right">
+                      <div className="flex justify-end">
+                        <TeamAvatar name={opp} size={36} badge={false} />
+                      </div>
+                      <div className="mt-2 truncate text-sm font-medium hover:underline">{clean(opp)}</div>
+                      <div className="text-2xl font-semibold tabular">{theirs ? fmt(Math.round(theirs.so_far)) : "-"}</div>
+                    </Link>
+                  </div>
+                  {win != null && (
+                    <div className="mt-4 space-y-1.5">
+                      <div className="flex justify-between text-xs text-muted-foreground tabular">
+                        <span>
+                          მოგების შანსი <b className="text-foreground">{Math.round(win * 100)}%</b>
+                        </span>
+                        <span>
+                          პროგნოზი {mine ? fmt(Math.round(mine.final)) : "-"} : {theirs ? fmt(Math.round(theirs.final)) : "-"}
                         </span>
                       </div>
-                      <div className="mt-1 flex h-1 overflow-hidden rounded-full bg-loss/40">
-                        <div className="bar-fill h-full origin-left bg-win" style={{ width: `${pct * 100}%` }} />
+                      <div className="flex h-1.5 overflow-hidden rounded-full bg-white/10">
+                        <div className="bg-foreground transition-all duration-700" style={{ width: `${win * 100}%` }} />
                       </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </Section>
-
-          {/* კარიერა */}
-          {m.seasons.length > 0 && (
-            <Section icon={<CalendarRange className="h-4 w-4" />} title="სეზონები">
-              <ol className="relative space-y-3 border-l border-white/10 pl-4">
-                {m.seasons.map((s) => (
-                  <li key={s.season} className="relative">
-                    <span className={cn("absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full ring-4 ring-black", s.champ ? "bg-gold" : "bg-white/30")} />
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="font-mono text-muted-foreground">{s.season}</span>
-                      <span className="font-medium">{s.rec}</span>
-                      {s.champ && (
-                        <Badge variant="gold" className="gap-1 py-0">
-                          <Crown className="h-3 w-3" /> ჩემპიონი
-                        </Badge>
-                      )}
+                      {mine && <div className="text-[11px] text-muted-foreground">{mine.games_left} თამაში დარჩა</div>}
                     </div>
-                    <div className="text-xs text-muted-foreground">{clean(s.team)}</div>
-                  </li>
-                ))}
-              </ol>
+                  )}
+                </Section>
+              )}
+
+              {/* კვირები */}
+              {vals.length > 0 && last && (
+                <Section icon={<TrendingUp className="h-4 w-4" />} title={`${last.label}, კვირების მიხედვით`} sub="მწვანე: მოგება, წითელი: წაგება">
+                  <div className="flex h-32 items-end gap-[3px]">
+                    {cells.map((c, i) => (
+                      <div
+                        key={i}
+                        title={c ? `კვირა ${i + 1}: ${c[0]}` : ""}
+                        className={cn("bar-grow flex-1 origin-bottom rounded-t-sm", !c ? "bg-white/5" : c[1] === 1 ? "bg-win/70" : c[1] === 0 ? "bg-loss/60" : "bg-white/30")}
+                        style={{ height: c ? `${12 + ((c[0] - min) / Math.max(1, max - min)) * 88}%` : "6%", animationDelay: `${150 + i * 30}ms` }}
+                      />
+                    ))}
+                  </div>
+                </Section>
+              )}
+
+              {/* ტრეიდები */}
+              <Section icon={<ArrowLeftRight className="h-4 w-4" />} title="ტრეიდები ამ სეზონში">
+                {trades.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">ჯერ ტრეიდი არ ყოფილა.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {trades.map((t, i) => (
+                      <div key={i} className="rounded-lg border border-white/10 p-3 text-sm">
+                        <div className="mb-1 text-xs text-muted-foreground">{new Date(t.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</div>
+                        {t.sides.map((sd, k) => (
+                          <div key={k}>
+                            <b>{clean(sd.team)}</b> გასცა: {sd.gives.map((g) => g.name).join(", ")}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Section>
+            </div>
+          </div>
+        )}
+
+        {tab === "story" && (
+          <div className="space-y-6">
+            {LORE[m.tid] && <Story lore={LORE[m.tid]} c1={c1} />}
+            {m.seasons.length > 0 && (
+              <Section icon={<CalendarRange className="h-4 w-4" />} title="სეზონები">
+                <ol className="relative space-y-3 border-l border-white/10 pl-4">
+                  {m.seasons.map((x) => (
+                    <li key={x.season} className="relative">
+                      <span className={cn("absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full ring-4 ring-black", x.champ ? "bg-gold" : "bg-white/30")} />
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="font-mono text-muted-foreground">{x.season}</span>
+                        <span className="font-medium">{x.rec}</span>
+                        {x.champ && <span className="flex items-center gap-1 text-xs text-gold"><Crown className="h-3 w-3" /> ჩემპიონი</span>}
+                      </div>
+                      <div className="text-xs text-muted-foreground">{clean(x.team)}</div>
+                    </li>
+                  ))}
+                </ol>
+              </Section>
+            )}
+          </div>
+        )}
+
+        {tab === "rivals" && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+              <Connections data={data} m={m} part="map" />
+              <Connections data={data} m={m} part="list" />
+            </div>
+            <Section icon={<Swords className="h-4 w-4" />} title="Head to Head" sub="ყველა სეზონი, რეგულარული">
+              {rivals.length === 0 ? (
+                <p className="text-sm text-muted-foreground">ჯერ არცერთი შეხვედრა.</p>
+              ) : (
+                <div className="grid grid-cols-1 gap-x-8 gap-y-2 md:grid-cols-2">
+                  {rivals.map((r) => {
+                    const pct = r.w / (r.w + r.l);
+                    const other = data.managers.find((x) => same(x.team, r.team) || x.seasons.some((z) => same(z.team, r.team)));
+                    return (
+                      <Link key={r.team} to={other ? `/team/${other.tid}` : "/h2h"} className="block rounded-lg px-1 py-1 transition-colors hover:bg-white/[0.04]">
+                        <div className="flex items-center gap-2 text-sm">
+                          <TeamAvatar name={r.team} size={22} badge={false} />
+                          <span className="flex-1 truncate">{clean(r.team)}</span>
+                          <span className={cn("font-mono tabular", r.w > r.l ? "text-win" : r.w < r.l ? "text-loss" : "text-muted-foreground")}>
+                            {r.w}-{r.l}
+                          </span>
+                        </div>
+                        <div className="mt-1 flex h-1 overflow-hidden rounded-full bg-loss/40">
+                          <div className="bar-fill h-full origin-left bg-win" style={{ width: `${pct * 100}%` }} />
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
             </Section>
-          )}
-        </div>
+          </div>
+        )}
+
+        {tab === "badges" && (
+          <Section icon={<Award className="h-4 w-4" />} title="მიღწევები" sub={`${earned} / ${badges.length} მიღებული. მიიტანე მაუსი დეტალებისთვის.`}>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+              {badges.map((b, i) => (
+                <BadgeTile key={b.id} b={b} i={i} />
+              ))}
+            </div>
+          </Section>
+        )}
       </div>
 
       {/* სხვა გუნდები */}
-      <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+      <div className="flex flex-wrap items-center justify-center gap-2 border-t border-white/[0.08] pt-6">
+        <span className="mr-2 text-xs text-muted-foreground">სხვა გუნდები</span>
         {data.managers
           .filter((x) => x.tid !== m.tid)
           .map((x) => (
-            <Link
-              key={x.tid}
-              to={`/team/${x.tid}`}
-              title={clean(x.team)}
-              className="rounded-full transition-transform duration-200 hover:-translate-y-1 hover:scale-110"
-            >
-              <TeamAvatar name={x.team} size={36} />
+            <Link key={x.tid} to={`/team/${x.tid}`} title={clean(x.team)} className="rounded-full opacity-70 transition-opacity hover:opacity-100">
+              <TeamAvatar name={x.team} size={32} badge={false} />
             </Link>
           ))}
       </div>

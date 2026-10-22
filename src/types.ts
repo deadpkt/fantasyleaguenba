@@ -169,6 +169,8 @@ export interface LeagueData {
   fans: Record<string, string>;
   managers: Manager[];
   waivers: WaiverPlayer[];
+  updated_at?: string;
+  projections: Projections | null;
   current_draft: CurrentDraftPick[];
   settings: LeagueSettings | null;
   trades?: Trades;
@@ -194,6 +196,21 @@ export interface RosterPlayer {
   projected: number;
   /** ESPN 2026–27 projection calculated with the league's custom scoring. */
   projected_avg: number;
+  /** ამ სეზონში ნათამაშები */
+  gp: number;
+  /** სეზონის ჯამური ფანტაზი ქულა */
+  total?: number;
+  /** სეზონის საშუალოები თამაშზე: PTS, REB, AST, STL, BLK, 3PM, TO, MIN, FG%, FT% */
+  season_line?: Record<string, number> | null;
+  /** მოსალოდნელი ქულა თამაშზე (ფაქტობრივი + ESPN projection) */
+  per_game: number;
+  /** თამაშები ამ კვირაში / დარჩენილი / მოსალოდნელი ქულა კვირის ბოლომდე */
+  week_games?: number;
+  week_left: number;
+  week_expected: number;
+  /** დარჩენილი თამაშები სეზონში */
+  ros_games: number;
+  slot?: string | null;
   injury: string | null;
 }
 
@@ -287,30 +304,91 @@ export interface NewsData {
   injuries: Injury[];
 }
 
+/** სტატისტიკის ხაზი (დღის ან კვირის) */
+export type StatLine = Record<"PTS" | "REB" | "AST" | "STL" | "BLK" | "TO" | "3PM" | "FGM" | "FGA" | "FTM" | "FTA" | "MIN", number>;
+
 export interface LivePlayer {
   name: string;
   pid: number;
   slot: string;
   pro: string;
   opp: string | null;
+  /** ქულა მთელ კვირაში */
   points: number;
   played: boolean;
   injury: string | null;
+  /** დღევანდელი თამაში: none (არ აქვს), upcoming, live, final */
+  status: "none" | "upcoming" | "live" | "final";
+  /** დღევანდელი თამაშის დაწყება (ISO) */
+  tip: string | null;
+  today: number;
+  today_line: StatLine | null;
+  week_line: StatLine | null;
+  per_game: number;
+  week_left: number;
+  week_games: number;
+  /** კვირის განრიგი: დღე (scoringPeriodId) → [მეტოქე, დაწყება ISO] */
+  games?: Record<string, [string | null, string | null]>;
+}
+
+/** /api/player: მოთამაშის გვერდი */
+export interface PlayerCard {
+  pid: number;
+  name: string;
+  pro: string | null;
+  pos: string | null;
+  injury: string | null;
+  return: string | null;
+  owner: { tid: number; team: string; slot: string | null } | null;
+  season: {
+    label: string;
+    gp: number;
+    total: number;
+    avg: number;
+    projected_avg: number;
+    per_game: number;
+    line: Record<string, number> | null;
+  };
+  last_season: { season: string; total: number; avg: number; gp: number } | null;
+  games: { sp: number; date: string | null; opp: string | null; fpts: number; line: StatLine }[];
+  upcoming: { sp: number; date: string | null; opp: string | null }[];
+  drafts: { season: string; team: string; round: number; pick: number; n: number; total: number | null; avg: number | null; rank: number | null }[];
+  updated: string;
+}
+
+export interface LiveDay {
+  sp: number;
+  /** ამერიკული დღე (YYYY-MM-DD) */
+  date: string | null;
+  today: boolean;
+  past: boolean;
 }
 
 export interface LiveTeam {
+  tid: number | null;
   name: string;
   score: number;
+  /** დღევანდელი ქულა (სასტარტოები) */
+  today: number;
+  /** ჩვენი პროგნოზი კვირის ბოლოსთვის (მოთამაშეებით) */
   projected: number | null;
+  espn_projected: number | null;
+  remaining: number | null;
+  games_left: number | null;
+  sd: number | null;
+  /** მოგების შანსი 0–1 */
+  win: number | null;
   starters: LivePlayer[];
   bench: LivePlayer[];
 }
 
 export interface LiveData {
   period: number;
+  today: number;
   is_points: boolean;
   drafted: boolean;
   updated: string;
+  days?: LiveDay[];
   matchups: { home: LiveTeam; away: LiveTeam }[];
 }
 
@@ -393,4 +471,21 @@ export interface CommunityData {
   polls: Poll[];
   wall: WallPost[];
   writable: boolean;
+}
+
+export interface TeamProjection {
+  so_far: number;
+  remaining: number;
+  final: number;
+  sd: number;
+  games_left: number;
+  /** კვირა → [საშუალო, sd] */
+  weeks: Record<string, [number, number]>;
+}
+
+export interface Projections {
+  week: number;
+  today: number;
+  slots: number;
+  teams: Record<string, TeamProjection>;
 }

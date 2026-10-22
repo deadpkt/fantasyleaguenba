@@ -249,19 +249,47 @@ export function playoffOdds(data: LeagueData, sims = 6000): OddsRow[] {
   const played = Math.max(0, ...[...st.values()].map((team) => team.scores.length));
   const weeklyVariance = Math.max(0.13, 0.19 - played * 0.003);
   const sd = (k: string) => Math.max(300, weeklyVariance * (mean.get(k) ?? pr.avg));
-  const roll = (k: string) => (mean.get(k) ?? pr.avg) + gauss(random) * sd(k);
+
+  // მოთამაშეებზე დაფუძნებული პროგნოზი (სერვერიდან): თითო კვირაზე — ვის რამდენი თამაში აქვს, ტრავმები,
+  // დღიური lineup. მიმდინარე კვირაში — უკვე დაგროვილი ქულა + დარჩენილი დღეები.
+  const pj = data.projections;
+  const pjTeams = new Map(Object.entries(pj?.teams ?? {}).map(([n, t]) => [key(n), t]));
+  const weekMean = (k: string, p: number): [number, number] | null => {
+    const t = pjTeams.get(k);
+    if (!t) return null;
+    if (pj && p === pj.week) return [t.final, Math.max(t.sd, 1)];
+    const w = t.weeks[String(p)];
+    return w ? [w[0], w[1]] : null;
+  };
+  // სეზონის "შოკი" თითო სიმულაციაში (ტრეიდები, გრძელი ტრავმები) — რომ შანსები ზედმეტად დარწმუნებული არ იყოს
+  let shock = new Map<string, number>();
+  const roll = (k: string, p?: number) => {
+    const wm = p != null ? weekMean(k, p) : null;
+    if (wm) return wm[0] * (1 + (shock.get(k) ?? 0)) + gauss(random) * wm[1];
+    return (mean.get(k) ?? pr.avg) * (1 + (shock.get(k) ?? 0)) + gauss(random) * sd(k);
+  };
+  // პლეიოფის (ორკვირიანი) მატჩისთვის — გუნდის დარჩენილი კვირების საშუალო ძალა
+  const avgWeek = new Map(
+    names.map((k) => {
+      const t = pjTeams.get(k);
+      const ws = t ? Object.values(t.weeks).map((w) => w[0]) : [];
+      return [k, ws.length ? ws.reduce((a, b) => a + b, 0) / ws.length : mean.get(k) ?? pr.avg];
+    }),
+  );
+  const rollPO = (k: string) => (avgWeek.get(k) ?? pr.avg) * (1 + (shock.get(k) ?? 0)) + gauss(random) * sd(k);
   const remaining = data.current.schedule.filter((g) => !g.done);
 
   const tally = new Map(names.map((k) => [k, { playoffs: 0, final: 0, title: 0, seedSum: 0 }]));
   for (let i = 0; i < sims; i++) {
+    shock = new Map(names.map((k) => [k, gauss(random) * 0.05]));
     const w = new Map(names.map((k) => [k, st.get(k)!.w]));
     const pf = new Map(names.map((k) => [k, st.get(k)!.pf]));
     for (const g of remaining) {
       const h = key(g.h);
       const a = key(g.a);
       if (!w.has(h) || !w.has(a)) continue;
-      const hs = roll(h);
-      const as = roll(a);
+      const hs = roll(h, g.p);
+      const as = roll(a, g.p);
       w.set(hs > as ? h : a, w.get(hs > as ? h : a)! + 1);
       pf.set(h, pf.get(h)! + hs);
       pf.set(a, pf.get(a)! + as);
@@ -274,7 +302,7 @@ export function playoffOdds(data: LeagueData, sims = 6000): OddsRow[] {
       t.seedSum += s + 1;
     });
     // ბრეკეტი: 1–4, 2–3 → ფინალი (ორკვირიანი მატჩები)
-    const duel = (a: string, b: string) => (roll(a) + roll(a) > roll(b) + roll(b) ? a : b);
+    const duel = (a: string, b: string) => (rollPO(a) + rollPO(a) > rollPO(b) + rollPO(b) ? a : b);
     let finalists: string[];
     if (seeds.length >= 4) finalists = [duel(seeds[0], seeds[3]), duel(seeds[1], seeds[2])];
     else finalists = seeds.slice(0, 2);
@@ -293,9 +321,20 @@ export function playoffOdds(data: LeagueData, sims = 6000): OddsRow[] {
         seed: t.playoffs ? t.seedSum / t.playoffs : 0,
         w: s.w,
         l: s.l,
-        expected: Math.round(mean.get(k) ?? pr.avg),
+        expected: Math.round(avgWeek.get(k) ?? mean.get(k) ?? pr.avg),
         trend: trends.get(k) ?? 0,
       };
     })
     .sort((a, b) => b.title - a.title || b.playoffs - a.playoffs);
+}
+
+/** ამ კვირის მატჩის მოგების შანსი მოთამაშეებზე დაფუძნებული პროგნოზით (home-ისთვის). null — თუ პროგნოზი არ არის. */
+export function projectedWin(data: LeagueData, home: string, away: string): number | null {
+  const teams = new Map(Object.entries(data.projections?.teams ?? {}).map(([n, t]) => [key(n), t]));
+  const h = teams.get(key(home));
+  const a = teams.get(key(away));
+  if (!h || !a) return null;
+  const sd = Math.sqrt(h.sd ** 2 + a.sd ** 2);
+  if (sd < 1) return h.final > a.final ? 1 : h.final < a.final ? 0 : 0.5;
+  return phi((h.final - a.final) / sd);
 }

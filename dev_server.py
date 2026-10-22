@@ -25,6 +25,7 @@ import live as live_api  # noqa: E402
 import announcements as ann_api  # noqa: E402
 import pickem as pick_api  # noqa: E402
 import community as com_api  # noqa: E402
+import player as player_api  # noqa: E402
 
 
 class Dev(SimpleHTTPRequestHandler):
@@ -34,6 +35,8 @@ class Dev(SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith("/api/data"):
             return data.handler.do_GET(self)
+        if self.path.startswith("/api/player"):
+            return player_api.handler.do_GET(self)
         if self.path.startswith("/api/live"):
             return live_api.handler.do_GET(self)
         if self.path.startswith("/api/announcements"):

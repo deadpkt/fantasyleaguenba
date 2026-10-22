@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""GET /api/live — ამ კვირის მატჩაფები ლაივ ანგარიშით (CDN-ში 60 წამი)."""
+"""GET /api/live — ამ კვირის მატჩაფები ლაივ ანგარიშით (CDN-ში 30 წამი, ESPN-იც დაახლოებით ასე ახლდება)."""
 import json
 import os
 import sys
@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "_li
 import espn_feed  # noqa: E402
 import live_feed  # noqa: E402
 
-CACHE_SECONDS = 60
+CACHE_SECONDS = 30
 _mem = {"at": 0.0, "body": None}
 
 
@@ -27,6 +27,6 @@ class handler(BaseHTTPRequestHandler):
             body, code = json.dumps({"error": str(e)}, ensure_ascii=False).encode("utf-8"), 502
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Cache-Control", f"public, s-maxage={CACHE_SECONDS}, stale-while-revalidate=300" if code == 200 else "no-store")
+        self.send_header("Cache-Control", f"public, s-maxage={CACHE_SECONDS}, stale-while-revalidate=120" if code == 200 else "no-store")
         self.end_headers()
         self.wfile.write(body)

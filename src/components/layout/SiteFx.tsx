@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Ball } from "@/components/league/announcement";
 
 /** მთელი საიტის ეფექტები:
- *  - ბარათები ჩნდება სქროლისას (.reveal → .shown)
+ *  - ბარათები ჩნდება სქროლისას (.reveal → data-shown; ატრიბუტს React არ ეხება, კლასს კი გადაწერს)
  *  - ბარათზე მაუსის "პროჟექტორი" (.spot, --mx / --my)
  *  - სქროლის პროგრესის ზოლი და "ზემოთ" ღილაკი */
 export default function SiteFx() {
@@ -23,13 +23,13 @@ export default function SiteFx() {
           if (!e.isIntersecting) continue;
           const el = e.target as HTMLElement;
           el.style.animationDelay = `${Math.min(i++, 6) * 70}ms`;
-          el.classList.add("shown");
+          el.dataset.shown = "";
           io.unobserve(el);
         }
       },
       { rootMargin: "0px 0px -40px 0px" },
     );
-    const scan = () => document.querySelectorAll(".reveal:not(.shown)").forEach((el) => io.observe(el));
+    const scan = () => document.querySelectorAll(".reveal:not([data-shown])").forEach((el) => io.observe(el));
     scan();
     const mo = new MutationObserver(scan);
     mo.observe(document.body, { childList: true, subtree: true });

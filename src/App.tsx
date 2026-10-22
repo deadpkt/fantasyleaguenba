@@ -18,12 +18,21 @@ import Live from "@/pages/Live";
 import Trades from "@/pages/Trades";
 import Announcements from "@/pages/Announcements";
 import TeamProfile from "@/pages/TeamProfile";
+import Player from "@/pages/Player";
 import Recap from "@/pages/Recap";
 import Trophies from "@/pages/Trophies";
 import Odds from "@/pages/Odds";
 import Analytics from "@/pages/Analytics";
 import DraftGrades from "@/pages/DraftGrades";
+import Stats from "@/pages/Stats";
 import SubNav from "@/components/layout/SubNav";
+import ErrorBoundary from "@/components/layout/ErrorBoundary";
+
+/** შეცდომის ჩარჩო, რომელიც გვერდის შეცვლისას თავიდან ცდის */
+function RouteErrorBoundary({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation();
+  return <ErrorBoundary resetKey={pathname}>{children}</ErrorBoundary>;
+}
 
 /** გვერდის შეცვლისას თავში ავდივართ */
 function ScrollTop() {
@@ -75,6 +84,7 @@ export default function App() {
           <SiteHeader league={state.data.league} season={state.data.current.label} data={state.data} />
           <main className="container relative z-10 min-h-[60vh]">
             <SubNav />
+            <RouteErrorBoundary>
             <PageTransition>
             <Routes>
               <Route path="/" element={<Home />} />
@@ -88,14 +98,17 @@ export default function App() {
               <Route path="/trades" element={<Trades />} />
               <Route path="/announcements" element={<Announcements />} />
               <Route path="/team/:tid" element={<TeamProfile />} />
+              <Route path="/player/:pid" element={<Player />} />
               <Route path="/odds" element={<Odds />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/draft-grades" element={<DraftGrades />} />
+              <Route path="/stats" element={<Stats />} />
               <Route path="/recap" element={<Recap />} />
               <Route path="/trophies" element={<Trophies />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
             </PageTransition>
+            </RouteErrorBoundary>
           </main>
           <Footer league={state.data.league} updated={state.data.updated} />
         </LeagueProvider>

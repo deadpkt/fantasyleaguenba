@@ -19,7 +19,7 @@ export default function SubNav() {
               cn(
                 "flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] transition-all duration-200",
                 isActive
-                  ? "bg-gradient-to-b from-orange-400/25 to-orange-500/10 text-orange-100 shadow-[inset_0_0_0_1px_rgba(251,146,60,0.35)]"
+                  ? "bg-white/[0.1] text-foreground"
                   : "text-muted-foreground hover:bg-white/[0.06] hover:text-foreground",
               )
             }

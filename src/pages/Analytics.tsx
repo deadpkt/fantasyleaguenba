@@ -1,118 +1,415 @@
 import { useMemo, useState } from "react";
-import { ArrowLeftRight, Search, Sparkles, UserPlus } from "lucide-react";
+import { ArrowLeftRight, CalendarDays, Plus, Search, Sparkles, UserPlus, X } from "lucide-react";
 import { useData } from "@/lib/league";
 import { clean, fmt } from "@/lib/format";
-import { key, winProb } from "@/lib/season";
-import { useApi } from "@/lib/useApi";
-import type { LiveData, Manager, RosterPlayer } from "@/types";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { key, projectedWin } from "@/lib/season";
+import { cn } from "@/lib/utils";
+import type { Manager, RosterPlayer } from "@/types";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import PageHeader from "@/components/layout/PageHeader";
 import { PlayerPhoto, TeamAvatar } from "@/components/league/team";
+import Updated from "@/components/league/Updated";
 
-const availability = (injury: string | null) => injury?.includes("OUT") || injury?.includes("IR") ? 0.8 : injury ? 0.96 : 1;
-const rosterPower = (m: Manager, weeks: number) => m.roster.reduce((n, p) => n + p.projected * availability(p.injury), 0) / weeks;
 const percent = (n: number) => `${Math.round(n * 100)}%`;
-const preseasonChance = (home: number, away: number) => {
-  const avg = Math.max(1, (home + away) / 2);
-  return Math.max(0.25, Math.min(0.75, 0.5 + ((home - away) / avg) * 0.9));
+const injuryLabel = (s: string | null) => (s ? s.replace(/_/g, " ") : "");
+/** შანსი, რომ ითამაშებს დარჩენილ სეზონში */
+const ros = (s: string | null) => {
+  const x = (s || "").toUpperCase();
+  if (x.includes("INJURY_RESERVE")) return 0.75;
+  if (x.includes("OUT")) return 0.9;
+  if (x.includes("SUSP")) return 0.95;
+  return 1;
 };
+const rosValue = (p: RosterPlayer) => p.per_game * p.ros_games * ros(p.injury);
+
+function Section({ icon, title, sub, children, right }: { icon: React.ReactNode; title: string; sub?: string; children: React.ReactNode; right?: React.ReactNode }) {
+  return (
+    <section className="space-y-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            {icon} {title}
+          </h2>
+          {sub && <p className="max-w-3xl text-sm text-muted-foreground">{sub}</p>}
+        </div>
+        {right}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/* ───────── ამ კვირის მატჩები ───────── */
 
 function MatchupPreview() {
   const data = useData();
-  const live = useApi<LiveData>("/api/live", 60_000);
-  const weeks = data.settings?.regular_season_weeks || 19;
+  const pj = data.projections;
   const managers = useMemo(() => new Map(data.managers.map((m) => [key(m.team), m])), [data.managers]);
-  const games = data.current.schedule.filter((g) => g.p === data.current.week);
+  const week = pj?.week ?? data.current.week;
+  const games = data.current.schedule.filter((g) => g.p === week);
+  const team = (n: string) => Object.entries(pj?.teams ?? {}).find(([k]) => key(k) === key(n))?.[1];
+
   return (
-    <section className="space-y-3">
-      <h2 className="flex items-center gap-2 text-lg font-semibold"><Sparkles className="h-5 w-5 text-gold" /> Matchup Preview · კვირა {data.current.week}</h2>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+    <Section
+      icon={<Sparkles className="h-5 w-5 text-gold" />}
+      title={`კვირა ${week}: მატჩების პროგნოზი`}
+      sub="ქულა ახლა, პროგნოზი კვირის ბოლოსთვის და ვინ ითამაშებს კიდევ. ითვლება მოთამაშეებით: საშუალო, ტრავმები, დარჩენილი თამაშები, 10 აქტიური სლოტი."
+    >
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {games.map((g) => {
-          const home = managers.get(key(g.h));
-          const away = managers.get(key(g.a));
-          const hp = home ? rosterPower(home, weeks) : 0;
-          const ap = away ? rosterPower(away, weeks) : 0;
-          const liveMatchup = live.state.status === "ready"
-            ? live.state.data.matchups.find((m) =>
-                (key(m.home.name) === key(g.h) && key(m.away.name) === key(g.a)) ||
-                (key(m.home.name) === key(g.a) && key(m.away.name) === key(g.h)))
-            : undefined;
-          const liveHome = liveMatchup && key(liveMatchup.home.name) === key(g.h) ? liveMatchup.home : liveMatchup?.away;
-          const liveAway = liveMatchup && key(liveMatchup.away.name) === key(g.a) ? liveMatchup.away : liveMatchup?.home;
-          const hasWeeklyProjection = liveHome?.projected != null && liveAway?.projected != null;
-          const chance = hasWeeklyProjection
-            ? winProb(liveHome!, liveAway!)
-            : preseasonChance(hp, ap);
+          const p = projectedWin(data, g.h, g.a) ?? 0.5;
+          const sides = [
+            { n: g.h, t: team(g.h), m: managers.get(key(g.h)), pr: p },
+            { n: g.a, t: team(g.a), m: managers.get(key(g.a)), pr: 1 - p },
+          ];
           return (
-            <Card key={`${g.p}-${g.h}-${g.a}`}>
-              <CardContent className="p-4">
-                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                  <div className="min-w-0"><TeamAvatar name={g.h} size={38} /><div className="mt-2 truncate text-sm font-medium">{clean(g.h)}</div><div className="text-xl font-bold tabular">{percent(chance)}</div></div>
-                  <div className="text-xs text-muted-foreground">VS</div>
-                  <div className="min-w-0 text-right"><div className="flex justify-end"><TeamAvatar name={g.a} size={38} /></div><div className="mt-2 truncate text-sm font-medium">{clean(g.a)}</div><div className="text-xl font-bold tabular">{percent(1 - chance)}</div></div>
+            <Card key={`${g.h}-${g.a}`}>
+              <CardContent className="space-y-4 p-4">
+                <div className="grid grid-cols-2 gap-3">
+                  {sides.map(({ n, t, pr }, i) => (
+                    <div key={n} className={cn("min-w-0", i === 1 && "text-right")}>
+                      <div className={cn("flex items-center gap-2", i === 1 && "flex-row-reverse")}>
+                        <TeamAvatar name={n} size={36} />
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-medium">{clean(n)}</div>
+                          <div className="text-[11px] text-muted-foreground">{t ? `${t.games_left} თამაში დარჩა` : ""}</div>
+                        </div>
+                      </div>
+                      <div className={cn("mt-2 text-2xl font-bold tabular", pr >= 0.5 ? "text-foreground" : "text-muted-foreground")}>{percent(pr)}</div>
+                      {t && (
+                        <div className="text-xs text-muted-foreground tabular">
+                          ახლა {fmt(Math.round(t.so_far))} · პროგნოზი <b className="text-foreground">{fmt(Math.round(t.final))}</b>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-                <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                  <span>{hasWeeklyProjection ? `ESPN ${fmt(liveHome!.projected!)}` : `საწყისი შეფასება ${fmt(hp)}`}</span>
-                  <span className="text-right">{hasWeeklyProjection ? `ESPN ${fmt(liveAway!.projected!)}` : `საწყისი შეფასება ${fmt(ap)}`}</span>
+                <div className="flex h-2 overflow-hidden rounded-full bg-white/10">
+                  <div className="bg-[hsl(var(--red))] transition-all duration-700" style={{ width: `${p * 100}%` }} />
+                  <div className="w-0.5 bg-black" />
+                  <div className="flex-1 bg-[hsl(var(--blue))]" />
                 </div>
-                {!hasWeeklyProjection && <p className="mt-2 text-center text-[11px] text-muted-foreground">ESPN-ის კვირის projection ჯერ არ გამოქვეყნებულა — პროცენტი მხოლოდ როსტერების რბილი შედარებაა.</p>}
+                {/* ვინ მოიტანს დარჩენილ ქულებს */}
+                <div className="grid grid-cols-2 gap-3">
+                  {sides.map(({ n, m }, i) => {
+                    const top = [...(m?.roster ?? [])]
+                      .filter((x) => x.week_left > 0)
+                      .sort((a, b) => b.week_expected - a.week_expected)
+                      .slice(0, 3);
+                    return (
+                      <div key={n} className="space-y-1">
+                        <div className={cn("text-[10px] uppercase tracking-wider text-muted-foreground", i === 1 && "text-right")}>მთავარი დარჩენილი</div>
+                        {top.length === 0 && <div className={cn("text-xs text-muted-foreground", i === 1 && "text-right")}>თამაშები დასრულდა</div>}
+                        {top.map((x) => (
+                          <div key={x.pid} className={cn("flex items-center gap-1.5 text-xs", i === 1 && "flex-row-reverse text-right")}>
+                            <PlayerPhoto pid={x.pid} className="h-6 w-6 shrink-0 rounded-full bg-muted object-cover" />
+                            <span className="min-w-0 flex-1 truncate">{x.name}</span>
+                            <span className="shrink-0 text-muted-foreground tabular" title={`${x.week_left} თამაში × ${x.per_game} ქულა`}>
+                              {x.week_left}×{Math.round(x.per_game)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
               </CardContent>
             </Card>
           );
         })}
       </div>
-    </section>
+    </Section>
   );
 }
+
+/* ───────── დარჩენილი თამაშები ───────── */
+
+function GamesLeft() {
+  const data = useData();
+  const rows = Object.entries(data.projections?.teams ?? {})
+    .map(([n, t]) => ({ n, ...t }))
+    .sort((a, b) => b.games_left - a.games_left);
+  if (!rows.length) return null;
+  const max = Math.max(1, ...rows.map((r) => r.games_left));
+  return (
+    <Section
+      icon={<CalendarDays className="h-5 w-5 text-[hsl(var(--blue))]" />}
+      title="ვის რამდენი თამაში დარჩა ამ კვირაში"
+      sub="ითვლება მხოლოდ ის თამაშები, რომლებიც 10 აქტიურ სლოტში მოხვდება. მარჯვნივ: მოსალოდნელი ქულა კვირის ბოლომდე."
+    >
+      <Card>
+        <CardContent className="space-y-2 p-4">
+          {rows.map((r) => (
+            <div key={r.n} className="grid grid-cols-[minmax(0,180px)_1fr_auto] items-center gap-3 text-sm">
+              <span className="flex min-w-0 items-center gap-2">
+                <TeamAvatar name={r.n} size={22} badge={false} />
+                <span className="truncate">{clean(r.n)}</span>
+              </span>
+              <div className="h-2.5 overflow-hidden rounded-full bg-white/[0.06]">
+                <div className="bar-fill h-full origin-left rounded-full bg-[hsl(var(--blue))]" style={{ width: `${(r.games_left / max) * 100}%` }} />
+              </div>
+              <span className="w-28 text-right text-xs text-muted-foreground tabular">
+                <b className="text-foreground">{r.games_left}</b> თამაში · +{fmt(Math.round(r.remaining))}
+              </span>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </Section>
+  );
+}
+
+/* ───────── თავისუფალი აგენტები ───────── */
 
 function WaiverWatch() {
   const { waivers = [] } = useData();
   const [query, setQuery] = useState("");
-  const shown = waivers.filter((p) => `${p.name} ${p.pos} ${p.pro}`.toLowerCase().includes(query.toLowerCase())).slice(0, 12);
+  const [mode, setMode] = useState<"week" | "season">("week");
+  const shown = waivers
+    .filter((p) => `${p.name} ${p.pos} ${p.pro}`.toLowerCase().includes(query.toLowerCase()))
+    .sort((a, b) => (mode === "week" ? b.week_expected - a.week_expected : b.per_game - a.per_game))
+    .slice(0, 12);
   return (
-    <section className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="flex items-center gap-2 text-lg font-semibold"><UserPlus className="h-5 w-5 text-win" /> Waiver Watch</h2><label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2"><Search className="h-4 w-4 text-muted-foreground" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="მოთამაშის ძებნა" className="w-40 bg-transparent text-sm outline-none" /></label></div>
+    <Section
+      icon={<UserPlus className="h-5 w-5 text-win" />}
+      title="თავისუფალი აგენტები"
+      sub={mode === "week" ? "ვინ მოიტანს ყველაზე მეტს ამ კვირის დარჩენილ თამაშებში." : "ვისაც ყველაზე მაღალი ქულა აქვს თამაშზე."}
+      right={
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-lg border border-white/10 bg-white/[0.03] p-0.5">
+            {(
+              [
+                ["week", "ამ კვირისთვის"],
+                ["season", "სეზონისთვის"],
+              ] as const
+            ).map(([v, l]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setMode(v)}
+                className={cn("rounded-md px-3 py-1.5 text-xs transition-colors", mode === v ? "bg-white text-black" : "text-muted-foreground hover:text-foreground")}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+          <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ძებნა" className="w-32 bg-transparent text-sm outline-none" />
+          </label>
+        </div>
+      }
+    >
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
-        {shown.map((p, i) => <Card key={p.pid}><CardContent className="flex items-center gap-3 p-3"><span className="w-5 text-xs text-muted-foreground">{i + 1}</span><PlayerPhoto pid={p.pid} className="h-9 w-9 rounded-full border bg-muted" /><div className="min-w-0 flex-1"><div className="truncate text-sm font-medium">{p.name}</div><div className="text-xs text-muted-foreground">{p.pos} · {p.pro}{p.injury ? ` · ${p.injury.replace(/_/g, " ")}` : ""}</div></div><div className="text-right"><div className="font-semibold tabular">{fmt(p.avg || p.projected_avg)}</div><div className="text-[10px] text-muted-foreground">{p.avg ? "AVG" : "PROJ"}</div></div></CardContent></Card>)}
+        {shown.map((p, i) => (
+          <Card key={p.pid}>
+            <CardContent className="flex items-center gap-3 p-3">
+              <span className="w-5 text-xs text-muted-foreground">{i + 1}</span>
+              <PlayerPhoto pid={p.pid} className="h-10 w-10 rounded-full border bg-muted object-cover" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium">{p.name}</div>
+                <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                  {p.pos} · {p.pro}
+                  {p.injury && (
+                    <Badge variant="loss" className="px-1 py-0 text-[9px]">
+                      {injuryLabel(p.injury)}
+                    </Badge>
+                  )}
+                </div>
+                <div className="text-[11px] text-muted-foreground">
+                  {p.week_left} თამაში ამ კვირაში · {p.gp} ნათამაშები
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="font-semibold tabular">{mode === "week" ? fmt(p.week_expected) : p.per_game.toFixed(1)}</div>
+                <div className="text-[10px] text-muted-foreground">{mode === "week" ? "კვირაში" : "თამაშზე"}</div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
-    </section>
+    </Section>
   );
 }
+
+/* ───────── ტრეიდის ანალიზი ───────── */
 
 const selectClass = "w-full rounded-lg border border-white/10 bg-zinc-950 px-3 py-2 text-sm";
 
-function TradeAnalyzer() {
-  const { managers } = useData();
-  const [a, setA] = useState(0), [b, setB] = useState(1), [pa, setPa] = useState(0), [pb, setPb] = useState(0);
-  const A = managers[a], B = managers[b];
-  const one = A?.roster[pa], two = B?.roster[pb];
-  const seasonDelta = one && two ? two.projected - one.projected : 0;
-  const playerAvg = (player: RosterPlayer) => player.projected_avg || player.projected / 72;
-  const perGameDelta = one && two ? playerAvg(two) - playerAvg(one) : 0;
-  const clearWinner = Math.sign(seasonDelta) === Math.sign(perGameDelta) && Math.abs(perGameDelta) >= 2;
+function TradeSide({
+  managers,
+  team,
+  picked,
+  onTeam,
+  onToggle,
+}: {
+  managers: Manager[];
+  team: number;
+  picked: number[];
+  onTeam: (v: number) => void;
+  onToggle: (pid: number) => void;
+}) {
+  const m = managers[team];
+  const [adding, setAdding] = useState("");
+  const chosen = (m?.roster ?? []).filter((p) => picked.includes(p.pid));
   return (
-    <section className="space-y-3"><h2 className="flex items-center gap-2 text-lg font-semibold"><ArrowLeftRight className="h-5 w-5 text-[hsl(var(--blue))]" /> Trade Analyzer</h2>
-      <Card><CardHeader><CardTitle className="text-base">ერთი-ერთზე გაცვლა</CardTitle><CardDescription>შეფასება მიმდინარე სეზონის ESPN projection-ითაა.</CardDescription></CardHeader><CardContent className="grid gap-4 md:grid-cols-[1fr_auto_1fr]">
-        <TradeSide managers={managers} team={a} player={pa} onTeam={(v) => { setA(v); setPa(0); }} onPlayer={setPa} selected={one} />
-        <div className="grid place-items-center"><ArrowLeftRight className="h-5 w-5 text-muted-foreground" /></div>
-        <TradeSide managers={managers} team={b} player={pb} onTeam={(v) => { setB(v); setPb(0); }} onPlayer={setPb} selected={two} />
-        <div className="md:col-span-3 rounded-lg border border-white/10 bg-white/[0.03] p-3 text-center text-sm">
-          {!one || !two
-            ? "აირჩიე მოთამაშეები"
-            : !clearWinner
-              ? `ახლო ტრეიდია · სხვაობა ${perGameDelta >= 0 ? "+" : ""}${perGameDelta.toFixed(1)} ქულა/თამაში და ${seasonDelta >= 0 ? "+" : ""}${fmt(seasonDelta)} სეზონზე`
-              : perGameDelta > 0
-                ? `${clean(A.team)} იღებს უკეთეს projection-ს: +${perGameDelta.toFixed(1)} ქულა/თამაში · +${fmt(seasonDelta)} სეზონზე`
-                : `${clean(B.team)} იღებს უკეთეს projection-ს: +${(-perGameDelta).toFixed(1)} ქულა/თამაში · +${fmt(-seasonDelta)} სეზონზე`}
+    <div className="space-y-2">
+      <select className={selectClass} value={team} onChange={(e) => onTeam(Number(e.target.value))}>
+        {managers.map((x, i) => (
+          <option key={x.tid} value={i}>
+            {clean(x.team)}
+          </option>
+        ))}
+      </select>
+      <div className="flex gap-2">
+        <select className={selectClass} value={adding} onChange={(e) => setAdding(e.target.value)}>
+          <option value="">აირჩიე მოთამაშე…</option>
+          {m?.roster
+            .filter((p) => !picked.includes(p.pid))
+            .map((p) => (
+              <option key={p.pid} value={p.pid}>
+                {p.name} ({p.per_game.toFixed(1)})
+              </option>
+            ))}
+        </select>
+        <Button
+          type="button"
+          size="icon"
+          variant="outline"
+          className="shrink-0 bg-transparent"
+          disabled={!adding || picked.length >= 3}
+          onClick={() => {
+            onToggle(Number(adding));
+            setAdding("");
+          }}
+          aria-label="დამატება"
+        >
+          <Plus />
+        </Button>
+      </div>
+      {chosen.map((p) => (
+        <div key={p.pid} className="flex items-center gap-2 rounded-lg bg-white/[0.03] p-2">
+          <PlayerPhoto pid={p.pid} className="h-8 w-8 rounded-full bg-muted object-cover" />
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm">{p.name}</div>
+            <div className="text-[11px] text-muted-foreground">
+              {p.per_game.toFixed(1)} თამაშზე · {p.ros_games} თამაში დარჩა{p.injury ? ` · ${injuryLabel(p.injury)}` : ""}
+            </div>
+          </div>
+          <span className="text-xs text-muted-foreground tabular" title="მოსალოდნელი ქულა სეზონის ბოლომდე">
+            {fmt(rosValue(p))}
+          </span>
+          <button type="button" onClick={() => onToggle(p.pid)} className="rounded p-1 text-muted-foreground hover:text-loss" aria-label="წაშლა">
+            <X className="h-3.5 w-3.5" />
+          </button>
         </div>
-      </CardContent></Card>
-    </section>
+      ))}
+    </div>
   );
 }
 
-function TradeSide({ managers, team, player, onTeam, onPlayer, selected }: { managers: Manager[]; team: number; player: number; onTeam: (v: number) => void; onPlayer: (v: number) => void; selected?: RosterPlayer }) {
-  const m = managers[team];
-  return <div className="space-y-2"><select className={selectClass} value={team} onChange={(e) => onTeam(Number(e.target.value))}>{managers.map((x, i) => <option key={x.tid} value={i}>{clean(x.team)}</option>)}</select><select className={selectClass} value={player} onChange={(e) => onPlayer(Number(e.target.value))}>{m?.roster.map((p, i) => <option key={p.pid} value={i}>{p.name}</option>)}</select>{selected && <div className="flex items-center gap-2 rounded-lg bg-white/[0.03] p-2"><PlayerPhoto pid={selected.pid} className="h-8 w-8 rounded-full" /><span className="text-sm">{(selected.projected_avg || selected.projected / 72).toFixed(1)}/თამაში · {fmt(selected.projected)} სეზონი</span></div>}</div>;
+function TradeAnalyzer() {
+  const { managers } = useData();
+  const [a, setA] = useState(0);
+  const [b, setB] = useState(Math.min(1, managers.length - 1));
+  const [pa, setPa] = useState<number[]>([]);
+  const [pb, setPb] = useState<number[]>([]);
+  const A = managers[a];
+  const B = managers[b];
+  const give = (A?.roster ?? []).filter((p) => pa.includes(p.pid));
+  const get = (B?.roster ?? []).filter((p) => pb.includes(p.pid));
+  const sum = (xs: RosterPlayer[], f: (p: RosterPlayer) => number) => xs.reduce((n, p) => n + f(p), 0);
+  // პირველი გუნდისთვის: რას იღებს მინუს რას აძლევს (დარჩენილი სეზონის ქულები)
+  const delta = sum(get, rosValue) - sum(give, rosValue);
+  const perGame = sum(get, (p) => p.per_game) - sum(give, (p) => p.per_game);
+  const total = Math.max(1, sum(get, rosValue) + sum(give, rosValue));
+  const share = 0.5 + delta / (2 * total);
+  const toggle = (set: React.Dispatch<React.SetStateAction<number[]>>) => (pid: number) =>
+    set((x) => (x.includes(pid) ? x.filter((y) => y !== pid) : x.length < 3 ? [...x, pid] : x));
+
+  return (
+    <Section
+      icon={<ArrowLeftRight className="h-5 w-5 text-[hsl(var(--blue))]" />}
+      title="ტრეიდის ანალიზი"
+      sub="თითო მხარეს 3 მოთამაშემდე. ფასდება დარჩენილი სეზონის მოსალოდნელი ქულით: ქულა თამაშზე × დარჩენილი თამაშები, ტრავმის გათვალისწინებით."
+    >
+      <Card>
+        <CardContent className="grid gap-4 p-4 md:grid-cols-[1fr_auto_1fr]">
+          <TradeSide
+            managers={managers}
+            team={a}
+            picked={pa}
+            onTeam={(v) => {
+              setA(v);
+              setPa([]);
+            }}
+            onToggle={toggle(setPa)}
+          />
+          <div className="grid place-items-center">
+            <ArrowLeftRight className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <TradeSide
+            managers={managers}
+            team={b}
+            picked={pb}
+            onTeam={(v) => {
+              setB(v);
+              setPb([]);
+            }}
+            onToggle={toggle(setPb)}
+          />
+          <div className="md:col-span-3">
+            {!give.length || !get.length ? (
+              <p className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-center text-sm text-muted-foreground">აირჩიე მოთამაშეები ორივე მხრიდან.</p>
+            ) : (
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                <div className="mb-2 flex justify-between text-xs text-muted-foreground">
+                  <span>{clean(A.team)} იღებს</span>
+                  <span>{clean(B.team)} იღებს</span>
+                </div>
+                <div className="flex h-2.5 overflow-hidden rounded-full bg-white/10">
+                  <div className="bg-[hsl(var(--red))] transition-all duration-500" style={{ width: `${share * 100}%` }} />
+                  <div className="w-0.5 bg-black" />
+                  <div className="flex-1 bg-[hsl(var(--blue))]" />
+                </div>
+                <p className="mt-3 text-center text-sm">
+                  {Math.abs(delta) < 150
+                    ? `თითქმის თანაბარი ტრეიდია: სხვაობა ${fmt(Math.abs(delta))} ქულა სეზონის ბოლომდე.`
+                    : `${clean(delta > 0 ? A.team : B.team)} იგებს დაახლოებით ${fmt(Math.abs(delta))} ქულას სეზონის ბოლომდე (${Math.abs(perGame).toFixed(1)} ქულა თამაშზე).`}
+                </p>
+                {give.length !== get.length && (
+                  <p className="mt-1 text-center text-xs text-muted-foreground">მოთამაშეების რაოდენობა განსხვავდება: ვინც მეტს იღებს, როსტერიდან ვინმე უნდა გაუშვას.</p>
+                )}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </Section>
+  );
 }
 
-export default function Analytics() { return <><PageHeader title="ანალიტიკა" description="კვირის matchup-ები, საუკეთესო თავისუფალი აგენტები და ტრეიდების შეფასება — მიმდინარე ESPN მონაცემებით." /><div className="space-y-10"><MatchupPreview /><WaiverWatch /><TradeAnalyzer /></div></>; }
+export default function Analytics() {
+  const data = useData();
+  return (
+    <>
+      <PageHeader title="ანალიტიკა" description="მატჩების პროგნოზი, დარჩენილი თამაშები, თავისუფალი აგენტები და ტრეიდების შეფასება. ყველაფერი ESPN-ის მიმდინარე მონაცემებით.">
+        <Updated at={data.updated_at} />
+      </PageHeader>
+      <div className="space-y-10">
+        {data.projections ? (
+          <>
+            <MatchupPreview />
+            <GamesLeft />
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">პროგნოზი ჯერ არ არის ხელმისაწვდომი.</p>
+        )}
+        <WaiverWatch />
+        <TradeAnalyzer />
+      </div>
+    </>
+  );
+}

@@ -7,6 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import PageHeader from "@/components/layout/PageHeader";
 import { Team, TeamAvatar } from "@/components/league/team";
 import { tone } from "@/lib/utils";
+import LastSeason from "@/components/league/LastSeason";
+import DidYouKnow from "@/components/league/DidYouKnow";
 
 export default function History() {
   const { champions, alltime, current } = useData();
@@ -15,6 +17,14 @@ export default function History() {
   return (
     <>
       <PageHeader title="ისტორია" description="ჩემპიონები და All-Time ცხრილი ყველა სეზონიდან (რეგულარული სეზონის მატჩები)." />
+
+      <div className="mb-12">
+        <LastSeason />
+      </div>
+
+      <div className="mb-12">
+        <DidYouKnow />
+      </div>
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">ჩემპიონები</h2>

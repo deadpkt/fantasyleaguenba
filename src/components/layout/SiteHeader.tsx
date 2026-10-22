@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
+  Activity,
   ArrowLeftRight,
   BarChart3,
   BookOpen,
@@ -38,6 +39,7 @@ export const SECTIONS: Section[] = [
     icon: Table2,
     pages: [
       { to: "/standings", label: "ცხრილი", icon: Table2 },
+      { to: "/stats", label: "სტატისტიკა", icon: Activity },
       { to: "/odds", label: "შანსები", icon: Percent },
       { to: "/analytics", label: "ანალიტიკა", icon: BarChart3 },
       { to: "/draft-grades", label: "Draft Grades", icon: Medal },
@@ -45,7 +47,7 @@ export const SECTIONS: Section[] = [
       { to: "/trades", label: "ტრეიდები", icon: ArrowLeftRight },
     ],
   },
-  { label: "გუნდები", icon: Users, pages: [{ to: "/managers", label: "გუნდები", icon: Users }], also: ["/team/"] },
+  { label: "გუნდები", icon: Users, pages: [{ to: "/managers", label: "გუნდები", icon: Users }], also: ["/team/", "/player/"] },
   {
     label: "ისტორია",
     icon: BookOpen,
@@ -69,14 +71,14 @@ export const sectionOf = (path: string) =>
 function Brand({ league }: { league: string }) {
   return (
     <NavLink to="/" className="group flex shrink-0 items-center gap-2.5">
-      <img
-        src="/icon.png"
-        alt=""
-        className="h-8 w-8 rounded-lg ring-1 ring-white/15 transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-105"
-      />
+      <span className="relative rounded-[10px] p-[1.5px]">
+        {/* ფერადი რგოლი, რომელიც მაუსზე ტრიალებს და ანათებს */}
+        <span aria-hidden className="brand-ring absolute inset-0 rounded-[10px] opacity-70 transition-opacity duration-300 group-hover:opacity-100" />
+        <img src="/icon.png" alt="" className="relative h-8 w-8 rounded-lg" />
+      </span>
       <span className="leading-none">
         <span className="block whitespace-nowrap text-sm font-semibold capitalize tracking-tight">{clean(league)}</span>
-        <span className="block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Fantasy NBA</span>
+        <span className="block text-[11px] text-muted-foreground">Fantasy NBA</span>
       </span>
     </NavLink>
   );
@@ -86,10 +88,7 @@ function SeasonPill({ season }: { season: string }) {
   if (!season) return null;
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-xs text-muted-foreground tabular">
-      <span className="relative flex h-1.5 w-1.5">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-win opacity-60 motion-reduce:hidden" />
-        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-win" />
-      </span>
+      <span className="h-1.5 w-1.5 rounded-full bg-win" />
       {season}
     </span>
   );
@@ -116,13 +115,15 @@ function DesktopNav() {
   }, [pathname]);
 
   return (
-    <nav ref={navRef} className="relative mx-auto hidden items-center gap-0.5 rounded-xl bg-white/[0.03] p-1 ring-1 ring-inset ring-white/[0.04] xl:flex">
+    <nav ref={navRef} className="relative mx-auto hidden items-center gap-0.5 rounded-xl bg-white/[0.03] p-1 ring-1 ring-inset ring-white/[0.05] xl:flex">
       {pill && (
-        <span
-          aria-hidden="true"
-          className="absolute top-1 h-[calc(100%-0.5rem)] rounded-lg bg-white shadow-[0_2px_12px_rgba(255,255,255,0.18)] transition-all duration-300 ease-[cubic-bezier(.3,1.3,.5,1)] motion-reduce:transition-none"
-          style={{ left: pill.left, width: pill.width }}
-        />
+        <>
+          <span
+            aria-hidden="true"
+            className="absolute top-1 h-[calc(100%-0.5rem)] rounded-lg bg-white transition-all duration-300 ease-out motion-reduce:transition-none"
+            style={{ left: pill.left, width: pill.width }}
+          />
+        </>
       )}
       {SECTIONS.map((sec) => (
         <NavGroup key={sec.label} sec={sec} active={sectionOf(pathname) === sec} />
@@ -211,40 +212,44 @@ function NavGroup({ sec, active }: { sec: Section; active: boolean }) {
 export default function SiteHeader({ league, season, data }: { league: string; season: string; data?: LeagueData }) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [hidden, setHidden] = useState(false);
   const { pathname } = useLocation();
 
+  // ქვემოთ სქროლვისას ნავბარი იმალება, ზემოთ სქროლვისას ბრუნდება
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      setScrolled(y > 12);
+      if (Math.abs(y - lastY) < 6) return;
+      setHidden(y > lastY && y > 120);
+      lastY = y;
+    };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+  useEffect(() => setHidden(false), [pathname]);
 
   return (
-    <header className={cn("sticky top-0 z-40 w-full transition-[padding] duration-300", scrolled ? "pt-2" : "pt-3")}>
+    <header
+      className={cn(
+        "sticky top-0 z-40 w-full transition-[padding,transform] duration-300 ease-out",
+        scrolled ? "pt-2" : "pt-3",
+        hidden && !open && "-translate-y-[120%]",
+      )}
+    >
       <div className="container">
         <div
           className={cn(
             "relative flex items-center gap-3 rounded-2xl border px-3 backdrop-blur-xl transition-all duration-300",
-            scrolled
-              ? "h-12 border-white/[0.12] bg-zinc-950/85 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.95)]"
-              : "h-14 border-white/10 bg-zinc-950/60 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.9)]",
+            scrolled ? "h-12 border-white/[0.1] bg-zinc-950/90" : "h-14 border-white/[0.08] bg-zinc-950/70",
           )}
         >
-          {/* თხელი ფერადი ხაზი ქვემოთ */}
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-6 -bottom-px h-px bg-gradient-to-r from-transparent via-[hsl(var(--red)/0.6)] to-transparent"
-          />
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-1/4 -bottom-px h-px bg-gradient-to-r from-[hsl(var(--gold)/0.0)] via-[hsl(var(--blue)/0.7)] to-[hsl(var(--gold)/0.0)]"
-          />
-
           <Brand league={league} />
           <DesktopNav />
 
-          <div className="ml-auto hidden 2xl:block">
+          <div className="ml-auto hidden xl:block">
             <SeasonPill season={season} />
           </div>
           <div className="hidden xl:block"><NotificationBell data={data} /></div>

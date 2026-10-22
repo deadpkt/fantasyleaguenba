@@ -75,7 +75,12 @@ function headline(games: PlayedGame[], week: number) {
 
 export default function Recap() {
   const data = useData();
-  const seasons = data.seasons.filter((s) => s.games?.length);
+  // მიმდინარე სეზონი (დასრულებული კვირებით) პირველი, მერე ისტორია
+  const curGames = data.current.schedule.filter((g) => g.done).map((g) => ({ p: g.p, h: g.h, a: g.a, hs: g.hs, as: g.as, po: false }));
+  const seasons = [
+    ...(curGames.length && !data.seasons.some((s) => s.label === data.current.label) ? [{ label: data.current.label, games: curGames }] : []),
+    ...data.seasons.filter((s) => s.games?.length),
+  ];
   const [si, setSi] = useState(0);
   const season = seasons[si];
   const weeks = useMemo(() => [...new Set((season?.games ?? []).map((g) => g.p))].sort((a, b) => a - b), [season]);

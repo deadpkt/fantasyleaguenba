@@ -8,6 +8,8 @@ import sys
 import espn_feed as ef
 import history as H
 import league_settings
+import live_feed
+import projections as PJ
 import trades as trades_mod
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -184,6 +186,7 @@ def build():
 
     # მენეჯერების პროფილები (ახლანდელი გუნდები + კარიერა)
     at_by_owner = dict(H.alltime(S))
+    proj = _projections(league)
     managers = []
     for t in sorted(league.teams, key=lambda t: t.team_id):
         owner = next((o for o, info in names.items() if info["tid"] == t.team_id), None)
@@ -193,7 +196,7 @@ def build():
         managers.append({
             "tid": t.team_id,
             "team": " ".join(t.team_name.split()), "abbrev": t.team_abbrev, "logo": t.logo_url or None,
-            "roster": _roster(t),
+            "roster": _roster(t, proj),
             "season_acquisitions": int(getattr(t, "acquisitions", 0) or 0),
             "season_trades": int(getattr(t, "trades", 0) or 0),
             "fan": fan_by_tid.get(str(t.team_id)),
@@ -207,9 +210,11 @@ def build():
         })
 
     return {"league": league.settings.name.strip(), "updated": datetime.date.today().isoformat(),
+            "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "projections": _proj_public(proj),
             "current": cur, "champions": champs, "alltime": alltime, "records": records,
             "seasons": seasons, "h2h": matrix, "logos": logos, "fans": fans, "managers": managers,
-            "settings": _settings(league), "waivers": _waivers(league), "current_draft": _current_draft(league),
+            "settings": _settings(league), "waivers": _waivers(league, proj), "current_draft": _current_draft(league),
             "trades": {"current": trades_mod.current(league), "past": trades_mod.past(S, H.season_label)}}
 
 
@@ -222,36 +227,97 @@ def _schedule(s):
              "done": g["win"] != "UNDECIDED"} for g in s["games"] if not g["po"]]
 
 
-def _roster(team):
-    """გუნდის ახლანდელი შემადგენლობა (დრაფტამდე ცარიელია)."""
+def _projections(league):
+    """მოთამაშეებზე დაფუძნებული პროგნოზი (იგივე, რაც Live-ზე). შეცდომისას — None."""
+    try:
+        week = league.box_scores(matchup_total=True)
+        day = league.box_scores(matchup_total=False)
+        scores, played = {}, {}
+        for b in week:
+            for side in ("home", "away"):
+                t = getattr(b, f"{side}_team")
+                if getattr(t, "team_id", None) is not None:
+                    scores[t.team_id] = float(getattr(b, f"{side}_score", 0) or 0)
+        for b in day:
+            for p in list(b.home_lineup or []) + list(b.away_lineup or []):
+                line = live_feed._line(p)
+                played[p.playerId] = bool(getattr(p, "game_played", 0) == 100 or (line and line.get("MIN")))
+        return PJ.build(league, live_feed.settings(league), scores, played)
+    except Exception:
+        return None
+
+
+def _proj_public(proj):
+    """საიტისთვის: გუნდები სახელით (frontend სახელებით მუშაობს)."""
+    if not proj:
+        return None
+    return {"week": proj["week"], "today": proj["today"], "slots": proj["slots"],
+            "teams": {t["name"]: {k: v for k, v in t.items() if k != "name"} for t in proj["teams"].values()}}
+
+
+SEASON_LINE = ("PTS", "REB", "AST", "STL", "BLK", "3PM", "TO", "MIN", "FG%", "FT%")
+
+
+def _season_line(p):
+    """ამ სეზონის საშუალოები თამაშზე (ESPN-ის "<წელი>_total" ჩანაწერიდან)."""
+    for k, v in (getattr(p, "stats", {}) or {}).items():
+        if str(k).endswith("_total") and isinstance(v, dict):
+            avg = v.get("avg") or {}
+            if avg:
+                return {s: round(float(avg.get(s, 0) or 0), 3 if "%" in s else 1) for s in SEASON_LINE}
+    return None
+
+
+def _roster(team, proj=None):
+    """გუნდის ახლანდელი შემადგენლობა (დრაფტამდე ცარიელია) + პროგნოზი თითო მოთამაშეზე."""
+    pp = (proj or {}).get("players", {})
     out = []
     for p in getattr(team, "roster", None) or []:
         inj = getattr(p, "injuryStatus", None)
+        x = pp.get(p.playerId, {})
         out.append({"name": p.name, "pid": p.playerId, "pos": getattr(p, "position", None), "pro": getattr(p, "proTeam", None),
+                    "slot": getattr(p, "lineupSlot", None),
                     "avg": round(float(getattr(p, "avg_points", 0) or 0), 1),
                     "projected_avg": round(float(getattr(p, "projected_avg_points", 0) or 0), 1),
                     "projected": round(float(getattr(p, "projected_total_points", 0) or 0), 1),
+                    "gp": int(PJ._gp(p)),
+                    "total": round(float(getattr(p, "total_points", 0) or 0)),
+                    "season_line": _season_line(p),
+                    "per_game": x.get("per_game", round(PJ.per_game(p), 1)),
+                    "week_games": x.get("week_games", 0), "week_left": x.get("week_left", 0),
+                    "week_expected": x.get("week_expected", 0), "ros_games": x.get("ros_games", 0),
                     "injury": inj if inj not in (None, "ACTIVE", "NORMAL") else None})
-    return sorted(out, key=lambda r: -r["avg"])
+    return sorted(out, key=lambda r: -r["per_game"])
 
 
-def _waivers(league):
-    """საუკეთესო თავისუფალი აგენტები — მიმდინარე ფორმით, შემდეგ სეზონის projection-ით."""
+def _waivers(league, proj=None):
+    """თავისუფალი აგენტები: ქულა თამაშზე, რამდენი თამაში დარჩა ამ კვირაში და რამდენს მოიტანს."""
     try:
-        players = league.free_agents(size=50)
+        players = league.free_agents(size=60)
     except Exception:
         return []
+    import pickem_core
+    week = league.currentMatchupPeriod
+    today = max(1, int(getattr(league, "scoringPeriodId", 0) or 1))
+    lo, hi = pickem_core.bounds(week)
+    by_team = PJ.team_days(league)
     out = []
     for p in players:
         injury = getattr(p, "injuryStatus", None)
+        pg = PJ.per_game(p)
+        days = PJ.game_days(p, by_team)
+        left = len([d for d in days if max(lo, today) <= d <= hi])
         out.append({
             "name": p.name, "pid": p.playerId, "pos": getattr(p, "position", None),
             "pro": getattr(p, "proTeam", None), "avg": round(float(getattr(p, "avg_points", 0) or 0), 1),
             "projected_avg": round(float(getattr(p, "projected_avg_points", 0) or 0), 1),
             "projected": round(float(getattr(p, "projected_total_points", 0) or 0), 1),
+            "gp": int(PJ._gp(p)), "per_game": round(pg, 1), "week_left": left,
+            "week_expected": round(pg * PJ.availability(injury, 0) * left, 1),
+            "ros_games": len([d for d in days if d >= today]),
             "injury": injury if injury not in (None, "ACTIVE", "NORMAL") else None,
         })
-    return sorted(out, key=lambda p: (p["injury"] is None, p["avg"], p["projected_avg"]), reverse=True)[:24]
+    return sorted(out, key=lambda p: -p["per_game"])[:30]
 
 
 def _current_draft(league):

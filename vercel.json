@@ -15,6 +15,9 @@
     "api/live.py": {
       "maxDuration": 30
     },
+    "api/player.py": {
+      "maxDuration": 30
+    },
     "api/announcements.py": {
       "maxDuration": 30
     },

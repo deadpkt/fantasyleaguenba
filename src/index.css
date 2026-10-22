@@ -51,29 +51,29 @@
 
 @layer components {
   /* ბარათი ფერადი აქცენტით: --tone = HSL ფერი (მაგ. var(--gold)) */
+  /* ბარათი ფერადი მარკერით: ზედაპირი ნეიტრალურია, ფერი მხოლოდ ზემოთ პატარა ზოლად */
   .tone-card {
     position: relative;
     overflow: hidden;
-    border-color: hsl(var(--tone) / 0.28);
-    background:
-      radial-gradient(120% 90% at 100% 0%, hsl(var(--tone) / 0.13), transparent 60%),
-      linear-gradient(180deg, hsl(var(--card) / 0.92), hsl(var(--card) / 0.86));
-    backdrop-filter: blur(6px);
+    border-color: rgb(255 255 255 / 0.08);
+    background: hsl(var(--card) / 0.94);
   }
   .tone-card::before {
     content: "";
     position: absolute;
-    inset: 0 0 auto 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, hsl(var(--tone) / 0.7), transparent);
+    top: 0;
+    left: 1.25rem;
+    width: 1.75rem;
+    height: 2px;
+    border-radius: 0 0 2px 2px;
+    background: hsl(var(--tone));
   }
   .lift {
-    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
   }
   @media (hover: hover) {
     .lift:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 18px 40px -18px hsl(var(--tone, 0 0% 0%) / 0.55);
+      border-color: rgb(255 255 255 / 0.18);
     }
   }
 }
@@ -179,12 +179,8 @@
 
 /* ── მთავარი გვერდი ── */
 .hero-title {
-  background: linear-gradient(100deg, #fff 0%, #fff 38%, #fdba74 48%, #fff 58%, #a1a1aa 100%);
-  background-size: 250% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: hero-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both, shine 7s ease-in-out 1.2s infinite;
+  color: hsl(var(--foreground));
+  animation: hero-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 @keyframes shine {
   0%, 60% { background-position: 100% 0; }
@@ -233,10 +229,7 @@
   mask-image: radial-gradient(ellipse 70% 80% at 85% 10%, #000, transparent 70%);
 }
 .champ-name {
-  background: linear-gradient(180deg, #fff 30%, #fcd34d 130%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: hsl(var(--foreground));
 }
 .champ-ring {
   background: conic-gradient(from var(--a, 0deg), #f59e0b, #fde68a, #b45309, #fbbf24, #f59e0b);
@@ -263,8 +256,8 @@
 
 /* ── მთელი საიტი ── */
 /* ბარათები ჩნდება სქროლისას */
-.reveal:not(.shown):not(.pass-in) { opacity: 0; }
-.reveal.shown:not(.pass-in) { animation: reveal-in 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+.reveal:not([data-shown]):not(.pass-in) { opacity: 0; }
+.reveal[data-shown]:not(.pass-in) { animation: reveal-in 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
 @keyframes reveal-in {
   from { opacity: 0; transform: translateY(18px) scale(0.985); }
 }
@@ -288,10 +281,7 @@
   from { opacity: 0; transform: translateY(10px); }
 }
 .page-title {
-  background: linear-gradient(180deg, #fff 35%, #a1a1aa);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: hsl(var(--foreground));
 }
 .head-line { transform-origin: left; animation: line-in 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s backwards; }
 @keyframes line-in { from { transform: scaleX(0); } }
@@ -299,9 +289,9 @@
 @keyframes ball-spin { from { transform: rotate(-540deg) scale(0.7); } }
 
 /* გრაფიკები იზრდება, როცა ბარათი გამოჩნდება */
-.shown .bar-grow { animation: bar-grow 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+[data-shown] .bar-grow { animation: bar-grow 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
 @keyframes bar-grow { from { transform: scaleY(0); } }
-.shown .bar-fill { animation: bar-fill 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s backwards; }
+[data-shown] .bar-fill { animation: bar-fill 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s backwards; }
 @keyframes bar-fill { from { transform: scaleX(0); } }
 
 /* "იცოდი?" */
@@ -313,8 +303,8 @@
 @keyframes fact-bar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .reveal:not(.shown):not(.pass-in) { opacity: 1; }
-  .reveal.shown, .page-in, .head-line, .ball-spin, .shown .bar-grow, .shown .bar-fill, .fact-in { animation: none; }
+  .reveal:not([data-shown]):not(.pass-in) { opacity: 1; }
+  .reveal[data-shown], .page-in, .head-line, .ball-spin, [data-shown] .bar-grow, [data-shown] .bar-fill, .fact-in { animation: none; }
 }
 
 /* პროგნოზი — ✓ ნიშნის გამოჩენა */
@@ -360,9 +350,54 @@
 }
 
 /* კავშირების დიაგრამა */
-.shown .conn-line { stroke-dasharray: 60; animation: conn-line 1s ease-out backwards; }
+[data-shown] .conn-line { stroke-dasharray: 60; animation: conn-line 1s ease-out backwards; }
 @keyframes conn-line { from { stroke-dashoffset: 60; } to { stroke-dashoffset: 0; } }
 .conn-node { animation: badge-in 0.5s cubic-bezier(0.3, 1.4, 0.5, 1) backwards; }
 @media (prefers-reduced-motion: reduce) {
-  .shown .conn-line, .conn-node { animation: none; }
+  [data-shown] .conn-line, .conn-node { animation: none; }
 }
+
+/* Draft Grades: გახსნისას პიკები რიგრიგობით შემოდის */
+.pick-row { animation: pick-row 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+@keyframes pick-row {
+  from { opacity: 0; transform: translateX(-8px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pick-row { animation: none; }
+}
+
+/* კვირის ვარსკვლავები: კვარცხლბეკი ამოდის ქვემოდან */
+.podium-in { animation: podium-in 0.7s cubic-bezier(0.2, 1.2, 0.4, 1) backwards; }
+@keyframes podium-in {
+  from { opacity: 0; transform: translateY(24px) scale(0.95); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .podium-in { animation: none; }
+}
+
+/* ნავბარის ლოგოს რგოლი */
+.brand-ring {
+  background: conic-gradient(from var(--a, 0deg), #f97316, #fde68a, hsl(var(--blue)), hsl(var(--red)), #f97316);
+  animation: champ-ring 8s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.45));
+}
+/* სათაურის აიკონის ანაბეჭდი ფონზე */
+.head-mark { animation: head-mark 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+@keyframes head-mark {
+  from { opacity: 0; transform: rotate(-12deg) scale(0.85); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brand-ring, .head-mark { animation: none; }
+}
+
+/* ── თავშეკავებული სტილი: ზედმეტი ეფექტების გამორთვა ── */
+.champ-grid, .champ-sheen, .trophy-shine { display: none; }
+.champ-ring { animation: none; background: rgb(255 255 255 / 0.12); box-shadow: none; }
+.brand-ring { animation: none; background: rgb(255 255 255 / 0.14); filter: none; }
+.trophy-float, .team-wave, .fan-logo { animation: none; }
+.spot::after { display: none; }
+/* გამოჩენა: მოკლე და მსუბუქი */
+.reveal[data-shown]:not(.pass-in) { animation: reveal-soft 0.4s ease-out backwards; }
+@keyframes reveal-soft { from { opacity: 0; transform: translateY(6px); } }
+.pass-in { animation: reveal-soft 0.4s ease-out both; }
+.hero-in { animation: reveal-soft 0.45s ease-out both; }

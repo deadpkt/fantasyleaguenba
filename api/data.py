@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """GET /api/data — ლიგის ყველა მონაცემი JSON-ად, პირდაპირ ESPN-იდან.
-Vercel-ის CDN პასუხს 10 წუთით ინახავს და ფონზე ანახლებს, ამიტომ საიტი სწრაფია და
-ESPN-ზე ცვლილება (ქულა, ტრეიდი, ცხრილი) საიტზე მაქსიმუმ ~10 წუთში ჩანს."""
+Vercel-ის CDN პასუხს 2 წუთით ინახავს და ფონზე ანახლებს, ამიტომ საიტი სწრაფია და
+ESPN-ზე ცვლილება (ქულა, ტრეიდი, ტრავმა, ცხრილი) საიტზე დაახლოებით 2 წუთში ჩანს."""
 import json
 import os
 import sys
@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "_li
 
 import site_data  # noqa: E402
 
-CACHE_SECONDS = 600
+CACHE_SECONDS = 120
 _mem = {"at": 0.0, "body": None}
 
 
@@ -31,7 +31,7 @@ class handler(BaseHTTPRequestHandler):
             body, code = json.dumps({"error": str(e)}, ensure_ascii=False).encode("utf-8"), 502
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Cache-Control", f"public, s-maxage={CACHE_SECONDS}, stale-while-revalidate={CACHE_SECONDS}"
+        self.send_header("Cache-Control", f"public, s-maxage={CACHE_SECONDS}, stale-while-revalidate=600"
                          if code == 200 else "no-store")
         self.end_headers()
         self.wfile.write(body)

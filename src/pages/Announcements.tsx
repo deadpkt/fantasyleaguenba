@@ -202,7 +202,7 @@ export default function Announcements() {
                     id="ann-image"
                     type="url"
                     inputMode="url"
-                    placeholder="სურათის ლინკი (https://...) — არასავალდებულო"
+                    placeholder="სურათის ლინკი (https://...), არასავალდებულო"
                     value={image}
                     maxLength={1000}
                     onChange={(e) => setImage(e.target.value)}

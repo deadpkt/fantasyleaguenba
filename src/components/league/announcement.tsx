@@ -60,7 +60,7 @@ export function fmtAnnDate(a: Announcement) {
   return isNaN(+t) ? d : t.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }).toUpperCase();
 }
 
-const isNew = (a: Announcement) => !!a.created && Date.now() - +new Date(a.created) < 3 * 864e5;
+export const isNew = (a: Announcement) => !!a.created && Date.now() - +new Date(a.created) < 3 * 864e5;
 
 export const EMOJIS = ["🔥", "🏀", "😂", "👏", "😮", "💀"] as const;
 const MINE_KEY = "wcf-reacted";
@@ -240,15 +240,16 @@ export function Reactions({
   );
 }
 
-/** ნახევარი მოედნის ხაზები — ბარათის ფონზე */
-function CourtLines() {
+const ACCENT = { gold: "from-amber-300 to-amber-600", red: "from-orange-400 to-[hsl(var(--red))]", blue: "from-sky-400 to-[hsl(var(--blue))]" } as const;
+
+/** კალენდრის ფურცელივით: ზემოთ ფერადი ზოლი თვით, ქვემოთ დიდი რიცხვი */
+export function DateTile({ a, tone: t, big }: { a: Announcement; tone: keyof typeof ACCENT; big?: boolean }) {
+  const [day, mon] = fmtAnnDate(a).split(" ");
   return (
-    <svg viewBox="0 0 160 120" className="pointer-events-none absolute -right-6 top-0 h-full opacity-[0.07]" fill="none" stroke="white" strokeWidth="1.5" aria-hidden>
-      <rect x="110" y="35" width="50" height="50" />
-      <circle cx="110" cy="60" r="25" />
-      <path d="M160 2 A 95 95 0 0 0 160 118" />
-      <circle cx="148" cy="60" r="5" />
-    </svg>
+    <div className={cn("flex shrink-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-black/60 text-center shadow-[0_8px_20px_-10px_rgba(0,0,0,0.8)]", big ? "w-16" : "w-12")}>
+      <span className={cn("bg-gradient-to-b py-0.5 font-mono text-[9px] font-bold tracking-widest text-black", ACCENT[t])}>{mon || "-"}</span>
+      <span className={cn("py-1 font-extrabold leading-none tabular", big ? "text-2xl" : "text-lg")}>{day || "-"}</span>
+    </div>
   );
 }
 
@@ -263,15 +264,12 @@ export function AnnouncementCard({ a, index = 0, compact, actions }: { a: Announ
       className={cn("tone-card lift pass-in group scroll-mt-28", selected && "ring-2 ring-orange-400 ring-offset-2 ring-offset-background")}
       style={{ ...tone(accent), animationDelay: `${index * 90}ms` }}
     >
-      <CourtLines />
-      <CardHeader className={cn("relative", compact ? "pb-2 pt-4" : "pb-2")}>
+      {/* ფერადი ზოლი მარცხნივ: მიმაგრებული / კომისარი / ESPN */}
+      <span aria-hidden className={cn("absolute inset-y-0 left-0 w-1 bg-gradient-to-b", ACCENT[accent])} />
+      <CardHeader className={cn("relative", compact ? "pb-2 pt-4" : "pb-3")}>
         <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-start gap-3">
-            {/* "შოთ-კლოკის" სტილის თარიღი */}
-            <div className="flex shrink-0 flex-col items-center rounded-md border border-white/10 bg-black/60 px-2 py-1 font-mono leading-none">
-              <span className="text-[15px] font-bold text-orange-400 [text-shadow:0_0_8px_rgba(249,115,22,0.6)]">{fmtAnnDate(a).split(" ")[0] || "-"}</span>
-              <span className="mt-0.5 text-[9px] tracking-widest text-muted-foreground">{fmtAnnDate(a).split(" ")[1] || ""}</span>
-            </div>
+          <div className="flex min-w-0 items-start gap-3.5">
+            <DateTile a={a} tone={accent} big={!compact} />
             <div className="min-w-0 space-y-1.5">
               <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                 {a.pinned && (
@@ -293,7 +291,7 @@ export function AnnouncementCard({ a, index = 0, compact, actions }: { a: Announ
                   {a.auto ? "ავტომატური · ESPN" : "კომისარი"}
                 </span>
               </div>
-              <CardTitle className={cn("leading-snug", compact ? "text-base" : "text-lg")}>{a.title}</CardTitle>
+              <CardTitle className={cn("leading-snug tracking-tight", compact ? "text-base" : "text-xl")}>{a.title}</CardTitle>
             </div>
           </div>
           <div className="flex shrink-0 gap-1">
@@ -303,20 +301,24 @@ export function AnnouncementCard({ a, index = 0, compact, actions }: { a: Announ
         </div>
       </CardHeader>
       {a.text && (
-        <CardContent className={cn("relative whitespace-pre-line text-sm text-muted-foreground", compact && "line-clamp-3", a.id ? "pb-3" : compact && "pb-4")}>{a.text}</CardContent>
+        <CardContent className={cn("relative whitespace-pre-line text-[15px] leading-relaxed text-muted-foreground", compact && "line-clamp-3 text-sm", a.id ? "pb-3" : compact && "pb-4")}>
+          {a.text}
+        </CardContent>
       )}
       {a.image && (
         <div className={cn("relative px-6", a.id ? "pb-3" : "pb-5")}>
-          <img
-            src={a.image}
-            alt={a.title}
-            loading="lazy"
-            className={cn("w-full rounded-xl border border-white/10 object-cover", compact ? "max-h-56" : "max-h-[32rem]")}
-          />
+          <div className="overflow-hidden rounded-xl border border-white/10">
+            <img
+              src={a.image}
+              alt={a.title}
+              loading="lazy"
+              className={cn("w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]", compact ? "max-h-56" : "max-h-[32rem]")}
+            />
+          </div>
         </div>
       )}
       {a.id && (
-        <div className={cn("relative px-6 pb-5", compact && "pb-4", !a.text && "pt-1")}>
+        <div className={cn("relative mx-6 border-t border-white/[0.06] pb-4 pt-3", !a.text && "mt-1")}>
           <Reactions id={a.id} initial={a.reactions} />
         </div>
       )}
