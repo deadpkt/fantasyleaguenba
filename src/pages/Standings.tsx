@@ -11,7 +11,7 @@ export default function Standings() {
     <>
       <PageHeader
         title={`ცხრილი · ${current.label}`}
-        description={current.drafted ? `კვირა ${current.week} · ახლდება ESPN-იდან რამდენიმე წუთში` : "სეზონი ჯერ არ დაწყებულა. დრაფტის შემდეგ აქ ცოცხალი ცხრილი იქნება."}
+        description={current.drafted ? `კვირა ${current.week}. ახლდება ESPN-იდან ყოველ წუთს.` : "სეზონი ჯერ არ დაწყებულა. დრაფტის შემდეგ აქ ცოცხალი ცხრილი იქნება."}
       />
       <Card>
         <Table>

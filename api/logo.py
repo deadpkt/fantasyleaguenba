@@ -47,6 +47,7 @@ class handler(BaseHTTPRequestHandler):
         except Exception:
             body = b""
             self.send_response(404)
-            self.send_header("Cache-Control", "no-store")
+            # წაშლილ ლოგოს ყოველ გვერდზე თავიდან არ ვითხოვთ ESPN-იდან
+            self.send_header("Cache-Control", "public, max-age=3600, s-maxage=3600")
         self.end_headers()
         self.wfile.write(body)

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect, type ComponentType } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useLeague } from "@/lib/useLeague";
 import { LeagueProvider } from "@/lib/league";
@@ -8,23 +8,43 @@ import Footer from "@/components/layout/Footer";
 import Backdrop from "@/components/layout/Backdrop";
 import SiteFx, { PageTransition } from "@/components/layout/SiteFx";
 import Home from "@/pages/Home";
-import Managers from "@/pages/Managers";
-import Standings from "@/pages/Standings";
-import History from "@/pages/History";
-import Records from "@/pages/Records";
-import Seasons from "@/pages/Seasons";
-import HeadToHead from "@/pages/HeadToHead";
-import Live from "@/pages/Live";
-import Trades from "@/pages/Trades";
-import Announcements from "@/pages/Announcements";
-import TeamProfile from "@/pages/TeamProfile";
-import Player from "@/pages/Player";
-import Recap from "@/pages/Recap";
-import Trophies from "@/pages/Trophies";
-import Odds from "@/pages/Odds";
-import Analytics from "@/pages/Analytics";
-import DraftGrades from "@/pages/DraftGrades";
-import Stats from "@/pages/Stats";
+
+/** გვერდები ცალკე ფაილებად იტვირთება, როცა საჭიროა (პირველი გახსნა უფრო სწრაფია).
+ *  ახალი deploy-ის შემდეგ ძველი ფაილი შეიძლება აღარ არსებობდეს: მაშინ გვერდს ერთხელ ვანახლებთ. */
+function page(load: () => Promise<{ default: ComponentType }>) {
+  return lazy(() =>
+    load().catch((e) => {
+      const k = "wcf-chunk-reload";
+      let tried = false;
+      try {
+        tried = sessionStorage.getItem(k) === "1";
+        sessionStorage.setItem(k, "1");
+      } catch {
+        /* private mode */
+      }
+      if (!tried) window.location.reload();
+      throw e;
+    }),
+  );
+}
+
+const Managers = page(() => import("@/pages/Managers"));
+const Standings = page(() => import("@/pages/Standings"));
+const History = page(() => import("@/pages/History"));
+const Records = page(() => import("@/pages/Records"));
+const Seasons = page(() => import("@/pages/Seasons"));
+const HeadToHead = page(() => import("@/pages/HeadToHead"));
+const Live = page(() => import("@/pages/Live"));
+const Trades = page(() => import("@/pages/Trades"));
+const Announcements = page(() => import("@/pages/Announcements"));
+const TeamProfile = page(() => import("@/pages/TeamProfile"));
+const Player = page(() => import("@/pages/Player"));
+const Recap = page(() => import("@/pages/Recap"));
+const Trophies = page(() => import("@/pages/Trophies"));
+const Odds = page(() => import("@/pages/Odds"));
+const Analytics = page(() => import("@/pages/Analytics"));
+const DraftGrades = page(() => import("@/pages/DraftGrades"));
+const Stats = page(() => import("@/pages/Stats"));
 import SubNav from "@/components/layout/SubNav";
 import ErrorBoundary from "@/components/layout/ErrorBoundary";
 
@@ -41,6 +61,16 @@ function ScrollTop() {
     window.scrollTo(0, 0);
   }, [pathname]);
   return null;
+}
+
+function PageSkeleton() {
+  return (
+    <div className="space-y-6 pt-10 md:pt-14">
+      <Skeleton className="h-9 w-56" />
+      <Skeleton className="h-4 w-80 max-w-full" />
+      <Skeleton className="h-64" />
+    </div>
+  );
 }
 
 function Loading({ error }: { error?: string }) {
@@ -86,6 +116,7 @@ export default function App() {
             <SubNav />
             <RouteErrorBoundary>
             <PageTransition>
+            <Suspense fallback={<PageSkeleton />}>
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/managers" element={<Managers />} />
@@ -107,6 +138,7 @@ export default function App() {
               <Route path="/trophies" element={<Trophies />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            </Suspense>
             </PageTransition>
             </RouteErrorBoundary>
           </main>

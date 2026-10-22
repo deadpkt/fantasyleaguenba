@@ -74,7 +74,7 @@ export default function ThisSeason() {
           <h2 className="flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-3xl">
             სეზონი {current.label}
           </h2>
-          <p className="text-sm text-muted-foreground">კვირა {week}. ყველაფერი ESPN-იდან, რამდენიმე წუთში ერთხელ ახლდება.</p>
+          <p className="text-sm text-muted-foreground">კვირა {week}. ყველაფერი ESPN-იდან, ახლდება ყოველ წუთს.</p>
         </div>
       </div>
 

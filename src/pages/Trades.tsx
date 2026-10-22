@@ -27,7 +27,7 @@ export default function Trades() {
 
   return (
     <>
-      <PageHeader title="ტრეიდები" description="ვინ ვის რა მისცა. მიმდინარე სეზონის ტრეიდები ESPN-იდან ავტომატურად ემატება, რამდენიმე წუთში.">
+      <PageHeader title="ტრეიდები" description="ვინ ვის რა მისცა. მიმდინარე სეზონის ტრეიდები ESPN-იდან ავტომატურად ემატება. ESPN ტრეიდს 24 საათი განიხილავს და მერე გადაჰყავს მოთამაშეები.">
         <Updated at={data.updated_at} />
       </PageHeader>
 
