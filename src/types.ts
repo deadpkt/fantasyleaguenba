@@ -399,7 +399,8 @@ export interface TradeSide {
 }
 
 export interface Trades {
-  current: { date: string; sides: TradeSide[] }[];
+  /** pending: ESPN-ზე განხილვაშია, მოთამაშეები ჯერ არ გადასულან; process_at: როდის გადავლენ */
+  current: { date: string; sides: TradeSide[]; pending?: boolean; process_at?: string }[];
   past: { season: string; total: number; teams: { team: string; trades: number }[] }[];
 }
 

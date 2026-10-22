@@ -403,7 +403,10 @@ export default function TeamProfile() {
                   <div className="space-y-2">
                     {trades.map((t, i) => (
                       <div key={i} className="rounded-lg border border-white/10 p-3 text-sm">
-                        <div className="mb-1 text-xs text-muted-foreground">{new Date(t.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</div>
+                        <div className="mb-1 text-xs text-muted-foreground">
+                          {new Date(t.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+                          {t.pending && <span className="ml-2 rounded bg-white/10 px-1.5 text-foreground">განხილვაში</span>}
+                        </div>
                         {t.sides.map((sd, k) => (
                           <div key={k}>
                             <b>{clean(sd.team)}</b> გასცა: {sd.gives.map((g) => g.name).join(", ")}

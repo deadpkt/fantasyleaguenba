@@ -10,7 +10,33 @@ def _name(t):
     return " ".join(getattr(t, "team_name", str(t or "")).split())
 
 
+def _review_hours(league):
+    """რამდენი საათი აქვს ტრეიდს განხილვისთვის (ვეტოს პერიოდი), სანამ ESPN მოთამაშეებს გადაიტანს."""
+    try:
+        raw = league.espn_request.league_get(params={"view": "mSettings"})
+        return int(((raw.get("settings") or {}).get("tradeSettings") or {}).get("revisionHours") or 0)
+    except Exception:
+        return 0
+
+
 def current(league):
+    """ტრეიდები + სტატუსი: pending = მიღებულია, მაგრამ ESPN-ს მოთამაშეები ჯერ არ გადაუტანია
+    (განხილვის პერიოდი). process_at = როდის გადაიტანს დაახლოებით."""
+    out = _current(league)
+    if not out:
+        return out
+    owner = {int(p.playerId): _name(t) for t in league.teams for p in (getattr(t, "roster", None) or [])}
+    hours = _review_hours(league)
+    for tr in out:
+        still = any(g.get("pid") and owner.get(int(g["pid"])) == side["team"] for side in tr["sides"] for g in side["gives"])
+        tr["pending"] = still
+        if still and hours:
+            at = datetime.datetime.fromisoformat(tr["date"]) + datetime.timedelta(hours=hours)
+            tr["process_at"] = at.isoformat()
+    return out
+
+
+def _current(league):
     """[{date, sides: [{team, gives: [{name, pid}]}]}] — უახლესი პირველი."""
     # ESPN-ის ახალი transaction feed მიღებულ trade-ს 224 ტიპით აბრუნებს,
     # ხოლო espn-api ჯერ მხოლოდ ძველ 244 (TRADED) ტიპს იცნობს. ამიტომ raw

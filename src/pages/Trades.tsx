@@ -9,6 +9,9 @@ import { PlayerPhoto, TeamAvatar } from "@/components/league/team";
 import Updated from "@/components/league/Updated";
 
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+/** "22 Oct, 13:35" თბილისის დროით */
+const when = (iso: string) =>
+  new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Tbilisi" });
 
 export default function Trades() {
   const data = useData();
@@ -57,7 +60,11 @@ export default function Trades() {
                       <span className="flex items-center gap-2">
                         <ArrowLeftRight className="h-4 w-4 text-[hsl(var(--blue))]" /> {day(t.date)}
                       </span>
-                      {total > 0 && (
+                      {t.pending ? (
+                        <Badge variant="secondary" className="font-normal">
+                          განხილვაში{t.process_at ? `, გადავლენ ~${when(t.process_at)}` : ""}
+                        </Badge>
+                      ) : total > 0 && (
                         <Badge variant={close ? "secondary" : "win"} className="font-normal">
                           {close ? "თანაბარი ტრეიდი" : `ახლა იგებს: ${clean(best.team)}`}
                         </Badge>
