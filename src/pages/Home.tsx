@@ -69,7 +69,7 @@ function TeamStack({ names }: { names: string[] }) {
   return (
     <Link
       to="/managers"
-      className="group/stack inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.03] py-1 pl-1 pr-4 backdrop-blur-md transition-colors duration-300 hover:border-white/20 hover:bg-white/[0.06]"
+      className="group/stack inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.03] py-1 pl-1 pr-4 transition-colors duration-300 hover:border-white/20 hover:bg-white/[0.06]"
     >
       <div className="flex">
         {names.map((n, i) => (
@@ -151,7 +151,7 @@ function RecentAnnouncements() {
             <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
               <div className="flex gap-1.5">
                 {reactions.map(([e, n]) => (
-                  <span key={e} className="rounded-full bg-white/10 px-2 py-0.5 text-xs tabular backdrop-blur">
+                  <span key={e} className="rounded-full bg-white/10 px-2 py-0.5 text-xs tabular">
                     {e} {n}
                   </span>
                 ))}
@@ -170,7 +170,7 @@ function RecentAnnouncements() {
               <Link
                 key={x.id ?? i}
                 to={href(x)}
-                className="pass-in group flex items-start gap-3 rounded-2xl border border-white/10 bg-card/70 p-4 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-white/20"
+                className="pass-in group flex items-start gap-3 rounded-2xl border border-white/10 bg-card p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/20"
                 style={{ animationDelay: `${120 + i * 90}ms` }}
               >
                 <DateTile a={x} tone={tone3(x)} />
@@ -237,7 +237,7 @@ export default function Home() {
                   ცხრილი <ArrowRight />
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="bg-white/[0.03] backdrop-blur">
+              <Button asChild variant="outline" className="bg-white/[0.03]">
                 <Link to="/live">
                   <Radio /> Live
                 </Link>

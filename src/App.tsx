@@ -46,6 +46,7 @@ const DraftGrades = page(() => import("@/pages/DraftGrades"));
 const Stats = page(() => import("@/pages/Stats"));
 import SubNav from "@/components/layout/SubNav";
 import { InstallBanner } from "@/components/layout/InstallApp";
+import BottomNav from "@/components/layout/BottomNav";
 import ErrorBoundary from "@/components/layout/ErrorBoundary";
 
 /** შეცდომის ჩარჩო, რომელიც გვერდის შეცვლისას თავიდან ცდის */
@@ -144,6 +145,7 @@ export default function App() {
           </main>
           <Footer league={state.data.league} updated={state.data.updated} />
           <InstallBanner />
+          <BottomNav />
         </LeagueProvider>
       )}
     </BrowserRouter>

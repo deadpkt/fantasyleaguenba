@@ -50,7 +50,7 @@ function Bars({ values }: { values: number[] }) {
 
 function ChampStat({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="rounded-xl border border-amber-400/15 bg-gradient-to-b from-amber-400/[0.07] to-transparent px-3.5 py-2.5 backdrop-blur-sm transition-colors duration-300 group-hover:border-amber-400/25">
+    <div className="rounded-xl border border-amber-400/15 bg-gradient-to-b from-amber-400/[0.07] to-transparent px-3.5 py-2.5 transition-colors duration-300 group-hover:border-amber-400/25">
       <div className="text-[11px] font-medium uppercase tracking-wider text-amber-200/60">{label}</div>
       <div className="mt-0.5 text-xl font-bold tabular sm:text-2xl">{value}</div>
     </div>

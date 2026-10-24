@@ -73,7 +73,7 @@ function ManagerCard({ m }: { m: Manager }) {
               <Photo m={m} />
             </div>
             {m.ovr != null ? (
-              <div className="rounded-lg border border-white/10 bg-black/40 px-2.5 py-1.5 text-center backdrop-blur">
+              <div className="rounded-lg border border-white/10 bg-black/40 px-2.5 py-1.5 text-center">
                 <div className="text-xl font-bold leading-none tabular">{m.ovr}</div>
                 <div className="mt-0.5 text-[10px] text-muted-foreground">OVR</div>
               </div>

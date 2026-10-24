@@ -1,31 +1,39 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /** საიტის ფონი: შავი, მკრთალი წერტილოვანი ბადე და ხაზოვანი ფარი —
- *  ბურთი რამდენიმე წამში ერთხელ ეკრანს გადაკვეთს და კალათში ვარდება. */
+ *  ბურთი რამდენიმე წამში ერთხელ ეკრანს გადაკვეთს და კალათში ვარდება.
+ *  ანიმაცია მხოლოდ დიდ ეკრანზე: ტელეფონზე ფარი უძრავია, რომ საიტი არ შენელდეს. */
 const DUR = "9s";
 // ფრენა 0 → 0.15, რკალიდან ბადეში ჩავარდნა 0.15 → 0.19, დანარჩენი — პაუზა
 const T = "0;0.15;0.19;1";
 const ARC = "M150 1000 Q 820 -380 1380 300 L1380 430";
+const ANIMATE = "(min-width: 1024px) and (prefers-reduced-motion: no-preference)";
 
 export default function Backdrop() {
-  const [motion, setMotion] = useState(true);
+  const [motion, setMotion] = useState(() => typeof window !== "undefined" && window.matchMedia(ANIMATE).matches);
+  const svg = useRef<SVGSVGElement>(null);
   useEffect(() => {
-    const m = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const on = () => setMotion(!m.matches);
+    const m = window.matchMedia(ANIMATE);
+    const on = () => setMotion(m.matches);
     on();
     m.addEventListener("change", on);
     return () => m.removeEventListener("change", on);
+  }, []);
+  // დამალულ ჩანართში ანიმაცია ჩერდება
+  useEffect(() => {
+    const vis = () => (document.hidden ? svg.current?.pauseAnimations() : svg.current?.unpauseAnimations());
+    document.addEventListener("visibilitychange", vis);
+    return () => document.removeEventListener("visibilitychange", vis);
   }, []);
 
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
       {/* წერტილოვანი ბადე — კიდეებისკენ ქრება */}
       <div className="backdrop-dots absolute inset-0" />
-      {/* რბილი ნათება ფარის უკან */}
-      <div className="absolute right-[-10%] top-[5%] h-[60vh] w-[60vh] rounded-full bg-orange-500/[0.07] blur-[120px]" />
-      <div className="absolute bottom-[-20%] left-[-10%] h-[50vh] w-[50vh] rounded-full bg-blue-500/[0.05] blur-[120px]" />
+      {/* რბილი ნათება ფარის უკან (gradient, არა blur: ტელეფონზე იაფია) */}
+      <div className="absolute inset-0 bg-[radial-gradient(45vh_45vh_at_85%_25%,rgb(249_115_22/0.07),transparent_70%),radial-gradient(40vh_40vh_at_5%_95%,rgb(59_130_246/0.05),transparent_70%)]" />
 
-      <svg viewBox="0 0 1600 900" preserveAspectRatio="xMaxYMid slice" className="absolute inset-0 h-full w-full opacity-80 max-md:opacity-30">
+      <svg ref={svg} viewBox="0 0 1600 900" preserveAspectRatio="xMaxYMid slice" className="absolute inset-0 h-full w-full opacity-80 max-md:opacity-25">
         <defs>
           <linearGradient id="bd-trail" x1="0" y1="1" x2="1" y2="0">
             <stop offset="0" stopColor="#f97316" stopOpacity="0" />

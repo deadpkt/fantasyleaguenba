@@ -69,8 +69,8 @@ export function InstallBanner() {
   };
 
   return (
-    <div className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-50 animate-in fade-in slide-in-from-bottom-4">
-      <div className="rounded-2xl border border-white/10 bg-zinc-950/95 p-4 shadow-2xl backdrop-blur-xl">
+    <div className="fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 animate-in fade-in slide-in-from-bottom-4">
+      <div className="rounded-2xl border border-white/10 bg-zinc-950/95 p-4 shadow-2xl">
         <div className="flex items-start gap-3">
           <img src="/icon-192.png" alt="" className="h-11 w-11 shrink-0 rounded-xl" />
           <div className="min-w-0 flex-1">

@@ -184,7 +184,7 @@ function NavGroup({ sec, active }: { sec: Section; active: boolean }) {
       </button>
       {open && (
         <div role="menu" className="absolute left-1/2 top-full z-50 -translate-x-1/2 pt-2.5">
-          <div className="w-56 rounded-xl border border-white/10 bg-zinc-950/95 p-1.5 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.9)] backdrop-blur-xl animate-in fade-in-0 zoom-in-95 slide-in-from-top-1">
+          <div className="w-56 rounded-xl border border-white/10 bg-zinc-950/95 p-1.5 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.9)] animate-in fade-in-0 zoom-in-95 slide-in-from-top-1">
             {sec.pages.map(({ to, label, icon: PIcon }) => (
               <NavLink
                 key={to}
@@ -241,8 +241,8 @@ export default function SiteHeader({ league, season, data }: { league: string; s
       <div className="container">
         <div
           className={cn(
-            "relative flex items-center gap-3 rounded-2xl border px-3 backdrop-blur-xl transition-all duration-300",
-            scrolled ? "h-12 border-white/[0.1] bg-zinc-950/90" : "h-14 border-white/[0.08] bg-zinc-950/70",
+            "relative flex items-center gap-3 rounded-2xl border px-3 transition-all duration-300",
+            scrolled ? "h-12 border-white/[0.1] bg-zinc-950/95" : "h-14 border-white/[0.08] bg-zinc-950/90",
           )}
         >
           <Brand league={league} />

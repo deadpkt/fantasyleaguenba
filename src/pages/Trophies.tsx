@@ -69,7 +69,7 @@ function TrophyItem({ metal, season, team, line, big, i }: { metal: keyof typeof
         <Cup metal={metal} className={cn("relative drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]", big ? "h-40 w-32 sm:h-48 sm:w-36" : "h-28 w-24")} />
         <span className="trophy-shine pointer-events-none absolute inset-0" />
       </div>
-      <div className="mt-2 rounded-md border border-white/10 bg-black/60 px-3 py-1.5 backdrop-blur">
+      <div className="mt-2 rounded-md border border-white/10 bg-black/60 px-3 py-1.5">
         <div className="font-mono text-[10px] tracking-widest text-muted-foreground">{season}</div>
         <div className="flex items-center justify-center gap-1.5 text-sm font-semibold">
           <TeamAvatar name={team} size={16} badge={false} /> {clean(team)}

@@ -166,7 +166,7 @@ export function Reactions({
               aria-pressed={active}
               title={LABELS[e]}
               className={cn(
-                "relative flex h-8 items-center gap-1.5 rounded-full border pl-2 pr-2.5 text-[15px] backdrop-blur-md transition-all duration-200 active:scale-90",
+                "relative flex h-8 items-center gap-1.5 rounded-full border pl-2 pr-2.5 text-[15px] transition-all duration-200 active:scale-90",
                 active
                   ? "border-orange-400/50 bg-gradient-to-b from-orange-500/25 to-orange-600/10 shadow-[0_0_0_1px_rgba(251,146,60,0.15),0_6px_20px_-6px_rgba(249,115,22,0.6)]"
                   : "border-white/10 bg-white/[0.04] hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.08]",
@@ -212,7 +212,7 @@ export function Reactions({
       {open && (
         <div
           role="menu"
-          className="react-picker absolute bottom-full left-0 z-30 mb-2 flex items-center gap-0.5 rounded-2xl border border-white/15 bg-zinc-900/80 p-1.5 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl"
+          className="react-picker absolute bottom-full left-0 z-30 mb-2 flex items-center gap-0.5 rounded-2xl border border-white/15 bg-zinc-900 p-1.5 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.08)]"
         >
           {EMOJIS.map((e, i) => (
             <button

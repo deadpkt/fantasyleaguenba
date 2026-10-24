@@ -10,7 +10,7 @@ export default function SubNav() {
 
   return (
     <div className="-mx-4 overflow-x-auto px-4 pt-6 [scrollbar-width:none] md:pt-8 [&::-webkit-scrollbar]:hidden">
-      <nav className="inline-flex gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1 backdrop-blur-md">
+      <nav className="inline-flex gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1">
         {sec.pages.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}

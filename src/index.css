@@ -2,29 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
-/* shadcn/ui — zinc, მუქი თემა (შავი ფონი) + ლიგის ფერები */
+/* მუქი თემა + ლიგის ფერები */
 @layer base {
   :root {
-    --background: 0 0% 0%;
+    --background: 240 6% 3%;
     --foreground: 0 0% 98%;
-    --card: 240 8% 6%;
+    --card: 240 5% 7%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 8% 6%;
+    --popover: 240 5% 8%;
     --popover-foreground: 0 0% 98%;
     --primary: 0 0% 98%;
     --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
+    --secondary: 240 4% 14%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 14%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
+    --muted: 240 4% 13%;
+    --muted-foreground: 240 5% 64%;
+    --accent: 240 4% 14%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
-    --radius: 0.75rem;
+    --border: 240 4% 14%;
+    --input: 240 4% 16%;
+    --ring: 240 5% 70%;
+    --radius: 0.875rem;
     --win: 142 70% 45%;
     --loss: 0 84% 62%;
     --gold: 43 96% 56%;
@@ -38,25 +38,32 @@
   }
   html {
     -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply bg-background text-foreground antialiased;
     padding-left: env(safe-area-inset-left, 0px);
     padding-right: env(safe-area-inset-right, 0px);
+    overflow-x: hidden;
   }
   .tabular {
     font-variant-numeric: tabular-nums;
   }
+  /* ტელეფონზე ქვედა მენიუსთვის ადგილი */
+  @media (max-width: 767px) {
+    body {
+      padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px));
+    }
+  }
 }
 
 @layer components {
-  /* ბარათი ფერადი აქცენტით: --tone = HSL ფერი (მაგ. var(--gold)) */
-  /* ბარათი ფერადი მარკერით: ზედაპირი ნეიტრალურია, ფერი მხოლოდ ზემოთ პატარა ზოლად */
+  /* ბარათი ფერადი მარკერით: ზედაპირი ნეიტრალურია, ფერი მხოლოდ ზემოთ პატარა ზოლად (--tone) */
   .tone-card {
     position: relative;
     overflow: hidden;
     border-color: rgb(255 255 255 / 0.08);
-    background: hsl(var(--card) / 0.94);
+    background: hsl(var(--card));
   }
   .tone-card::before {
     content: "";
@@ -69,7 +76,7 @@
     background: hsl(var(--tone));
   }
   .lift {
-    transition: border-color 0.2s ease, background-color 0.2s ease;
+    transition: border-color 0.2s ease;
   }
   @media (hover: hover) {
     .lift:hover {
@@ -78,326 +85,327 @@
   }
 }
 
-/* ── კალათბურთის ანიმაციები (განცხადებები) ── */
-.shot-x { animation: shot-x 3.6s linear infinite; }
-.shot-y { animation: shot-y 3.6s infinite; }
-.shot-spin { animation: shot-spin 3.6s linear infinite; }
-.shot-net { transform-origin: top center; animation: shot-net 3.6s ease-out infinite; }
-.shot-text { opacity: 0; animation: shot-text 3.6s ease-out infinite; }
-
-@keyframes shot-x {
-  0% { transform: translateX(0); }
-  50%, 100% { transform: translateX(177px); }
-}
-@keyframes shot-y {
-  0% { transform: translateY(0); opacity: 1; animation-timing-function: cubic-bezier(0.2, 0.6, 0.4, 1); }
-  27% { transform: translateY(-74px); animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.4); }
-  50% { transform: translateY(-33px); animation-timing-function: ease-in; }
-  68% { transform: translateY(-4px); opacity: 1; }
-  78%, 100% { transform: translateY(-4px); opacity: 0; }
-}
-@keyframes shot-spin {
-  0% { transform: rotate(0); }
-  60%, 100% { transform: rotate(-600deg); }
-}
-@keyframes shot-net {
-  0%, 52% { transform: scaleY(1) skewX(0); }
-  58% { transform: scaleY(1.3) skewX(-6deg); }
-  66% { transform: scaleY(0.92) skewX(4deg); }
-  74%, 100% { transform: scaleY(1) skewX(0); }
-}
-@keyframes shot-text {
-  0%, 54% { opacity: 0; transform: translateY(6px) scale(0.8); }
-  62% { opacity: 1; transform: translateY(0) scale(1.08); }
-  80% { opacity: 1; transform: translateY(-2px) scale(1); }
-  92%, 100% { opacity: 0; transform: translateY(-6px); }
-}
-
-/* ბარათები შემოდის როგორც პასი */
-.pass-in { animation: pass-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-@keyframes pass-in {
-  from { opacity: 0; transform: translateX(-28px) rotate(-1.2deg); }
-  to { opacity: 1; transform: none; }
-}
-
-/* გამოქვეყნებისას: ბურთი დრიბლინგით */
-.dribble { animation: dribble 0.5s cubic-bezier(0.5, 0, 0.5, 1) infinite alternate; }
-@keyframes dribble {
-  from { transform: translateY(-7px); }
-  to { transform: translateY(3px) scale(1.06, 0.92); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .shot-x, .shot-y, .shot-spin, .shot-net, .shot-text, .pass-in, .dribble { animation: none; }
-  .shot-text { opacity: 0; }
-}
-
-/* რეაქციები */
-.react-pop { animation: react-pop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1); }
-@keyframes react-pop {
-  0% { transform: scale(0.4) rotate(-20deg); }
-  55% { transform: scale(1.45) rotate(10deg); }
-  100% { transform: scale(1) rotate(0); }
-}
-.react-count { animation: react-count 0.3s ease-out; }
-@keyframes react-count {
-  from { transform: translateY(6px); opacity: 0; }
-  to { transform: none; opacity: 1; }
-}
-.react-float { opacity: 0; animation: react-float 0.85s ease-out forwards; }
-@keyframes react-float {
-  0% { opacity: 1; transform: translate(0, 0) scale(0.7); }
-  100% { opacity: 0; transform: translate(var(--dx, 0), -42px) scale(1.3) rotate(-14deg); }
-}
-.react-ring { animation: react-ring 0.6s ease-out forwards; }
-@keyframes react-ring {
-  from { transform: scale(1); opacity: 1; }
-  to { transform: scale(1.6); opacity: 0; }
-}
-.react-picker { transform-origin: bottom left; animation: react-picker 0.22s cubic-bezier(0.2, 1.2, 0.4, 1); }
-@keyframes react-picker {
-  from { opacity: 0; transform: translateY(6px) scale(0.85); }
-  to { opacity: 1; transform: none; }
-}
-.react-option { animation: react-option 0.3s cubic-bezier(0.3, 1.5, 0.5, 1) both; }
-@keyframes react-option {
-  from { opacity: 0; transform: translateY(8px) scale(0.5); }
-  to { opacity: 1; transform: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .react-pop, .react-count, .react-ring, .react-picker, .react-option { animation: none; }
-  .react-float, .react-ring { display: none; }
-}
-
-/* ფონის წერტილოვანი ბადე */
+/* ── ფონი ── */
 .backdrop-dots {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
   background-size: 26px 26px;
   -webkit-mask-image: radial-gradient(ellipse 80% 70% at 70% 30%, black 10%, transparent 75%);
   mask-image: radial-gradient(ellipse 80% 70% at 70% 30%, black 10%, transparent 75%);
 }
 
-/* ── მთავარი გვერდი ── */
-.hero-title {
-  color: hsl(var(--foreground));
-  animation: hero-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+/* ── შემოსვლის ანიმაციები: მოკლე, მხოლოდ opacity/transform (ტელეფონზეც მსუბუქია) ── */
+@keyframes soft-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
 }
-@keyframes shine {
-  0%, 60% { background-position: 100% 0; }
-  85%, 100% { background-position: 0% 0; }
+.page-in,
+.hero-in,
+.hero-title,
+.pass-in,
+.fact-in {
+  animation: soft-in 0.35s ease-out both;
 }
-.hero-in { animation: hero-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-@keyframes hero-in {
-  from { opacity: 0; transform: translateY(14px); filter: blur(6px); }
-  to { opacity: 1; transform: none; filter: none; }
+.badge-in,
+.trophy,
+.conn-node,
+.podium-in,
+.team-pop {
+  animation: soft-in 0.4s ease-out backwards;
 }
-.team-pop { animation: team-pop 0.5s cubic-bezier(0.3, 1.5, 0.5, 1) both; }
-@keyframes team-pop {
-  from { opacity: 0; transform: scale(0.4); }
-  to { opacity: 1; transform: none; }
+.pick-row {
+  animation: soft-in 0.3s ease-out backwards;
 }
-.ticker-track { animation: ticker 45s linear infinite; }
-.ticker:hover .ticker-track { animation-play-state: paused; }
-@keyframes ticker {
-  to { transform: translateX(-100%); }
+.digit-in {
+  display: inline-block;
+  animation: soft-in 0.3s ease-out;
 }
-/* ციფრის შეცვლა — ზემოდან ჩამოსრიალდება */
-.digit-in { display: inline-block; animation: digit-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
-@keyframes digit-in {
-  from { opacity: 0; transform: translateY(-40%); filter: blur(2px); }
-  to { opacity: 1; transform: none; filter: none; }
+.fan-bg {
+  animation: fade-in 0.6s ease-out;
 }
-@media (prefers-reduced-motion: reduce) {
-  .hero-title { animation: none; }
-  .hero-in, .team-pop, .digit-in { animation: none; }
-  .ticker-track { animation-duration: 160s; }
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
 }
-
-/* ლოგოების ტალღა — ყოველ 6 წამში ერთხელ */
-.team-wave { animation: team-wave 6s ease-in-out infinite; }
-@keyframes team-wave {
-  0%, 8%, 100% { transform: none; }
-  4% { transform: translateY(-5px); }
-}
-
-/* ჩემპიონის ბარათი */
-.champ-grid {
-  background-image: linear-gradient(rgba(251, 191, 36, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(251, 191, 36, 0.05) 1px, transparent 1px);
-  background-size: 28px 28px;
-  -webkit-mask-image: radial-gradient(ellipse 70% 80% at 85% 10%, #000, transparent 70%);
-  mask-image: radial-gradient(ellipse 70% 80% at 85% 10%, #000, transparent 70%);
-}
+.page-title,
 .champ-name {
   color: hsl(var(--foreground));
 }
-.champ-ring {
-  background: conic-gradient(from var(--a, 0deg), #f59e0b, #fde68a, #b45309, #fbbf24, #f59e0b);
-  animation: champ-ring 6s linear infinite;
-  box-shadow: 0 0 30px -6px rgba(245, 158, 11, 0.55);
+
+/* გრაფიკები */
+.bar-grow {
+  transform-origin: bottom;
+  animation: bar-grow 0.6s ease-out backwards;
 }
-@property --a { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
-@keyframes champ-ring { to { --a: 360deg; } }
-.champ-sheen {
-  background: linear-gradient(100deg, transparent, rgba(253, 230, 138, 0.09), transparent);
-  transform: skewX(-15deg) translateX(0);
-  transition: transform 1.1s ease;
+@keyframes bar-grow {
+  from {
+    transform: scaleY(0);
+  }
 }
-.champ-card:hover .champ-sheen { transform: skewX(-15deg) translateX(500%); }
-.trophy-float { animation: trophy-float 5s ease-in-out infinite; }
-@keyframes trophy-float {
-  0%, 100% { transform: translateY(0) rotate(-2deg); }
-  50% { transform: translateY(-8px) rotate(2deg); }
+.bar-fill {
+  transform-origin: left;
+  animation: bar-fill 0.8s ease-out 0.1s backwards;
 }
-@media (prefers-reduced-motion: reduce) {
-  .team-wave, .champ-ring, .trophy-float { animation: none; }
-  .champ-sheen { display: none; }
+@keyframes bar-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+.conn-line {
+  stroke-dasharray: 60;
+  animation: conn-line 0.8s ease-out backwards;
+}
+@keyframes conn-line {
+  from {
+    stroke-dashoffset: 60;
+  }
+}
+.fact-bar {
+  animation-name: fact-bar;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+@keyframes fact-bar {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
 }
 
-/* ── მთელი საიტი ── */
-/* ბარათები ჩნდება სქროლისას */
-.reveal:not([data-shown]):not(.pass-in) { opacity: 0; }
-.reveal[data-shown]:not(.pass-in) { animation: reveal-in 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
-@keyframes reveal-in {
-  from { opacity: 0; transform: translateY(18px) scale(0.985); }
+/* ამბების ზოლი */
+.ticker-track {
+  animation: ticker 45s linear infinite;
 }
-/* მაუსის პროჟექტორი ბარათზე */
-.spot::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
+.ticker:hover .ticker-track {
+  animation-play-state: paused;
+}
+@keyframes ticker {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+/* "ზემოთ" ღილაკი */
+.ball-spin {
+  animation: ball-spin 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes ball-spin {
+  from {
+    transform: rotate(-540deg) scale(0.7);
+  }
+}
+
+/* ── განცხადებები: ბურთი კალათში ── */
+.shot-x {
+  animation: shot-x 3.6s linear infinite;
+}
+.shot-y {
+  animation: shot-y 3.6s infinite;
+}
+.shot-spin {
+  animation: shot-spin 3.6s linear infinite;
+}
+.shot-net {
+  transform-origin: top center;
+  animation: shot-net 3.6s ease-out infinite;
+}
+.shot-text {
   opacity: 0;
-  transition: opacity 0.35s ease;
-  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, 0.055), transparent 45%);
+  animation: shot-text 3.6s ease-out infinite;
 }
-@media (hover: hover) {
-  .spot:hover::after { opacity: 1; }
+@keyframes shot-x {
+  0% {
+    transform: translateX(0);
+  }
+  50%,
+  100% {
+    transform: translateX(177px);
+  }
 }
-/* გვერდის შეცვლა */
-.page-in { animation: page-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); }
-@keyframes page-in {
-  from { opacity: 0; transform: translateY(10px); }
+@keyframes shot-y {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.2, 0.6, 0.4, 1);
+  }
+  27% {
+    transform: translateY(-74px);
+    animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.4);
+  }
+  50% {
+    transform: translateY(-33px);
+    animation-timing-function: ease-in;
+  }
+  68% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+  78%,
+  100% {
+    transform: translateY(-4px);
+    opacity: 0;
+  }
 }
-.page-title {
-  color: hsl(var(--foreground));
+@keyframes shot-spin {
+  0% {
+    transform: rotate(0);
+  }
+  60%,
+  100% {
+    transform: rotate(-600deg);
+  }
 }
-.head-line { transform-origin: left; animation: line-in 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s backwards; }
-@keyframes line-in { from { transform: scaleX(0); } }
-.ball-spin { animation: ball-spin 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); }
-@keyframes ball-spin { from { transform: rotate(-540deg) scale(0.7); } }
+@keyframes shot-net {
+  0%,
+  52% {
+    transform: scaleY(1) skewX(0);
+  }
+  58% {
+    transform: scaleY(1.3) skewX(-6deg);
+  }
+  66% {
+    transform: scaleY(0.92) skewX(4deg);
+  }
+  74%,
+  100% {
+    transform: scaleY(1) skewX(0);
+  }
+}
+@keyframes shot-text {
+  0%,
+  54% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.8);
+  }
+  62% {
+    opacity: 1;
+    transform: translateY(0) scale(1.08);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1);
+  }
+  92%,
+  100% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+/* გამოქვეყნებისას: ბურთი დრიბლინგით */
+.dribble {
+  animation: dribble 0.5s cubic-bezier(0.5, 0, 0.5, 1) infinite alternate;
+}
+@keyframes dribble {
+  from {
+    transform: translateY(-7px);
+  }
+  to {
+    transform: translateY(3px) scale(1.06, 0.92);
+  }
+}
 
-/* გრაფიკები იზრდება, როცა ბარათი გამოჩნდება */
-[data-shown] .bar-grow { animation: bar-grow 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
-@keyframes bar-grow { from { transform: scaleY(0); } }
-[data-shown] .bar-fill { animation: bar-fill 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s backwards; }
-@keyframes bar-fill { from { transform: scaleX(0); } }
-
-/* "იცოდი?" */
-.fact-in { animation: fact-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
-@keyframes fact-in {
-  from { opacity: 0; transform: translateY(8px); }
+/* რეაქციები */
+.react-pop {
+  animation: react-pop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1);
 }
-.fact-bar { animation-name: fact-bar; animation-timing-function: linear; animation-fill-mode: both; }
-@keyframes fact-bar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-
-@media (prefers-reduced-motion: reduce) {
-  .reveal:not([data-shown]):not(.pass-in) { opacity: 1; }
-  .reveal[data-shown], .page-in, .head-line, .ball-spin, [data-shown] .bar-grow, [data-shown] .bar-fill, .fact-in { animation: none; }
+@keyframes react-pop {
+  0% {
+    transform: scale(0.4) rotate(-20deg);
+  }
+  55% {
+    transform: scale(1.45) rotate(10deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
 }
-
-/* პროგნოზი — ✓ ნიშნის გამოჩენა */
-.pick-pop { animation: pick-pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1); }
+.react-count {
+  animation: soft-in 0.3s ease-out;
+}
+.react-float {
+  opacity: 0;
+  animation: react-float 0.85s ease-out forwards;
+}
+@keyframes react-float {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(0.7);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx, 0), -42px) scale(1.3) rotate(-14deg);
+  }
+}
+.react-ring {
+  animation: react-ring 0.6s ease-out forwards;
+}
+@keyframes react-ring {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+.react-picker {
+  transform-origin: bottom left;
+  animation: react-picker 0.2s ease-out;
+}
+@keyframes react-picker {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.9);
+  }
+}
+.react-option {
+  animation: react-option 0.25s ease-out both;
+}
+@keyframes react-option {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.6);
+  }
+}
+.pick-pop {
+  animation: pick-pop 0.3s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
 @keyframes pick-pop {
-  from { transform: scale(0); }
-  to { transform: scale(1); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .pick-pop { animation: none; }
+  from {
+    transform: scale(0);
+  }
 }
 
-/* ბეჯები */
-.badge-in { animation: badge-in 0.5s cubic-bezier(0.3, 1.4, 0.5, 1) backwards; }
-@keyframes badge-in {
-  from { opacity: 0; transform: translateY(10px) scale(0.85); }
+/* ჩემპიონის ბარათი და ლოგოს რგოლი: მშვიდი, ანიმაციის გარეშე */
+.champ-ring {
+  background: rgb(255 255 255 / 0.12);
 }
-/* გულშემატკივრობის ფონი პროფილზე */
-.fan-bg { animation: fan-bg 0.9s ease-out; }
-@keyframes fan-bg { from { opacity: 0; } }
-.fan-logo { animation: fan-logo 24s ease-in-out infinite alternate; }
-@keyframes fan-logo {
-  from { transform: rotate(-10deg) scale(1); }
-  to { transform: rotate(-4deg) scale(1.06); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .badge-in, .fan-bg, .fan-logo { animation: none; }
-}
-
-/* ტროფეები */
-.trophy { animation: badge-in 0.6s cubic-bezier(0.3, 1.4, 0.5, 1) backwards; }
-.trophy-shine {
-  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%);
-  background-size: 250% 100%;
-  background-position: 120% 0;
-  -webkit-mask-image: linear-gradient(#000, #000);
-  mix-blend-mode: overlay;
-  transition: background-position 0.9s ease;
-}
-.trophy:hover .trophy-shine { background-position: -20% 0; }
-@media (prefers-reduced-motion: reduce) {
-  .trophy { animation: none; }
-}
-
-/* კავშირების დიაგრამა */
-[data-shown] .conn-line { stroke-dasharray: 60; animation: conn-line 1s ease-out backwards; }
-@keyframes conn-line { from { stroke-dashoffset: 60; } to { stroke-dashoffset: 0; } }
-.conn-node { animation: badge-in 0.5s cubic-bezier(0.3, 1.4, 0.5, 1) backwards; }
-@media (prefers-reduced-motion: reduce) {
-  [data-shown] .conn-line, .conn-node { animation: none; }
-}
-
-/* Draft Grades: გახსნისას პიკები რიგრიგობით შემოდის */
-.pick-row { animation: pick-row 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
-@keyframes pick-row {
-  from { opacity: 0; transform: translateX(-8px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .pick-row { animation: none; }
-}
-
-/* კვირის ვარსკვლავები: კვარცხლბეკი ამოდის ქვემოდან */
-.podium-in { animation: podium-in 0.7s cubic-bezier(0.2, 1.2, 0.4, 1) backwards; }
-@keyframes podium-in {
-  from { opacity: 0; transform: translateY(24px) scale(0.95); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .podium-in { animation: none; }
-}
-
-/* ნავბარის ლოგოს რგოლი */
 .brand-ring {
-  background: conic-gradient(from var(--a, 0deg), #f97316, #fde68a, hsl(var(--blue)), hsl(var(--red)), #f97316);
-  animation: champ-ring 8s linear infinite;
-  filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.45));
+  background: rgb(255 255 255 / 0.14);
 }
-/* სათაურის აიკონის ანაბეჭდი ფონზე */
-.head-mark { animation: head-mark 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
-@keyframes head-mark {
-  from { opacity: 0; transform: rotate(-12deg) scale(0.85); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .brand-ring, .head-mark { animation: none; }
+.champ-grid,
+.champ-sheen,
+.trophy-shine {
+  display: none;
 }
 
-/* ── თავშეკავებული სტილი: ზედმეტი ეფექტების გამორთვა ── */
-.champ-grid, .champ-sheen, .trophy-shine { display: none; }
-.champ-ring { animation: none; background: rgb(255 255 255 / 0.12); box-shadow: none; }
-.brand-ring { animation: none; background: rgb(255 255 255 / 0.14); filter: none; }
-.trophy-float, .team-wave, .fan-logo { animation: none; }
-.spot::after { display: none; }
-/* გამოჩენა: მოკლე და მსუბუქი */
-.reveal[data-shown]:not(.pass-in) { animation: reveal-soft 0.4s ease-out backwards; }
-@keyframes reveal-soft { from { opacity: 0; transform: translateY(6px); } }
-.pass-in { animation: reveal-soft 0.4s ease-out both; }
-.hero-in { animation: reveal-soft 0.45s ease-out both; }
+/* მოძრაობის შემცირება სისტემის პარამეტრებში */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .shot-text,
+  .react-float,
+  .react-ring {
+    display: none;
+  }
+}
