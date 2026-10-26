@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import PageHeader from "@/components/layout/PageHeader";
 import { PlayerPhoto, TeamAvatar } from "@/components/league/team";
 import Updated from "@/components/league/Updated";
+import TradeBlock from "@/components/league/TradeBlock";
 
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 /** "22 Oct, 13:35" თბილისის დროით */
@@ -31,8 +32,10 @@ export default function Trades() {
         <Updated at={data.updated_at} />
       </PageHeader>
 
+      <TradeBlock />
+
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">სეზონი {current.label}</h2>
+        <h2 className="text-lg font-semibold">ტრეიდები · {current.label}</h2>
         {cur.length === 0 ? (
           <Card className="border-dashed bg-transparent shadow-none">
             <CardContent className="flex items-center gap-3 p-5 text-sm text-muted-foreground">

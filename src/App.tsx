@@ -36,10 +36,10 @@ const Seasons = page(() => import("@/pages/Seasons"));
 const HeadToHead = page(() => import("@/pages/HeadToHead"));
 const Live = page(() => import("@/pages/Live"));
 const Trades = page(() => import("@/pages/Trades"));
-const Announcements = page(() => import("@/pages/Announcements"));
 const TeamProfile = page(() => import("@/pages/TeamProfile"));
 const Player = page(() => import("@/pages/Player"));
 const Recap = page(() => import("@/pages/Recap"));
+const RecapArchive = page(() => import("@/pages/RecapArchive"));
 const Trophies = page(() => import("@/pages/Trophies"));
 const Analytics = page(() => import("@/pages/Analytics"));
 const DraftGrades = page(() => import("@/pages/DraftGrades"));
@@ -128,7 +128,7 @@ export default function App() {
               <Route path="/h2h" element={<HeadToHead />} />
               <Route path="/live" element={<Live />} />
               <Route path="/trades" element={<Trades />} />
-              <Route path="/announcements" element={<Announcements />} />
+              <Route path="/announcements" element={<Navigate to="/" replace />} />
               <Route path="/team/:tid" element={<TeamProfile />} />
               <Route path="/player/:pid" element={<Player />} />
               <Route path="/odds" element={<Navigate to="/analytics?tab=odds" replace />} />
@@ -136,6 +136,7 @@ export default function App() {
               <Route path="/draft-grades" element={<DraftGrades />} />
               <Route path="/stats" element={<Stats />} />
               <Route path="/recap" element={<Recap />} />
+              <Route path="/archive" element={<RecapArchive />} />
               <Route path="/trophies" element={<Trophies />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
@@ -143,7 +144,7 @@ export default function App() {
             </PageTransition>
             </RouteErrorBoundary>
           </main>
-          <Footer league={state.data.league} updated={state.data.updated} />
+          <Footer league={state.data.league} season={state.data.current.label} updatedAt={state.data.updated_at} />
           <InstallBanner />
           <BottomNav />
         </LeagueProvider>

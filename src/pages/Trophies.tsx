@@ -90,7 +90,7 @@ export default function Trophies() {
     <>
       <PageHeader title="ტროფეების თარო" description="ლიგის ყველა ბანერი ერთ ადგილას. თასზე დაჭერით გუნდის პროფილზე გადახვალ." />
       <div className="space-y-12">
-        <Shelf title="🏆 ჩემპიონები">
+        <Shelf title="ჩემპიონები">
           {champs.map((c, i) => (
             <TrophyItem key={c.season} i={i} big metal="gold" season={c.season} team={c.team} line={`${c.rec} · ჩემპიონი`} />
           ))}
@@ -104,7 +104,7 @@ export default function Trophies() {
         </Shelf>
 
         {finals.length > 0 && (
-          <Shelf title="🥈 ფინალისტები">
+          <Shelf title="ფინალისტები">
             {finals.map((c, i) => (
               <TrophyItem key={c.season} i={i} metal="silver" season={c.season} team={c.runner!} line={`ფინალი vs ${clean(c.team)}`} />
             ))}
@@ -112,7 +112,7 @@ export default function Trophies() {
         )}
 
         {scorers.length > 0 && (
-          <Shelf title="🔥 სეზონის ყველაზე მეტი ქულა">
+          <Shelf title="სეზონის ყველაზე მეტი ქულა">
             {scorers.map((s, i) => (
               <TrophyItem
                 key={s.label}

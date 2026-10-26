@@ -1,12 +1,14 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { ArrowLeftRight, Award, CalendarRange, Crown, Lock, Shirt, Swords, TrendingUp } from "lucide-react";
+import { ArrowLeftRight, Award, BarChart3, CalendarRange, Crown, Lock, Shirt, Swords, TrendingUp } from "lucide-react";
 import { useData } from "@/lib/league";
 import { clean, fmt, plain } from "@/lib/format";
 import { espnImage } from "@/lib/logos";
 import { NBA, nbaLogo } from "@/lib/nba";
 import { cn } from "@/lib/utils";
+import { injuryLabel, isOut } from "@/lib/injury";
+import { useTradeBlock } from "@/components/league/TradeBlock";
 import { projectedWin } from "@/lib/season";
 import { achievements, type Achievement } from "@/lib/badges";
 import { LORE, type Lore } from "@/data/lore";
@@ -91,7 +93,6 @@ function Story({ lore, c1, left, right }: { lore: Lore; c1: string; left?: React
           <div className="absolute inset-y-0 left-0 w-0.5" style={{ background: c1 }} />
           <CardContent className="space-y-4 p-5 sm:p-7">
             <div className="text-xs text-muted-foreground">ისტორია</div>
-            <p className="text-xl font-semibold italic leading-snug sm:text-2xl">„{lore.tagline}“</p>
             <p className="leading-relaxed text-muted-foreground">{lore.story}</p>
           </CardContent>
         </Card>
@@ -146,10 +147,14 @@ const TABS: [Tab, string][] = [
   ["badges", "მიღწევები"],
 ];
 
+/** გუნდის სეზონის სტატისტიკა (ESPN-ის ცხრილიდან) */
+const TEAM_STATS = ["PTS", "REB", "AST", "STL", "BLK", "3PM", "TO"];
+
 export default function TeamProfile() {
   const { tid } = useParams();
   const data = useData();
   const [tab, setTab] = useState<Tab>("overview");
+  const tradeBlock = useTradeBlock();
   useEffect(() => setTab("overview"), [tid]);
   const m = data.managers.find((x) => String(x.tid) === tid);
   if (!m) return <Navigate to="/managers" replace />;
@@ -157,8 +162,9 @@ export default function TeamProfile() {
   const nba = m.fan ? NBA[m.fan] : undefined;
   const c1 = nba?.primary ?? "#f97316";
   const c2 = nba?.secondary ?? "#3b82f6";
-  const rank = data.current.standings.findIndex((t) => same(t.name, m.team)) + 1;
-  const cur = data.current.standings[rank - 1];
+  const row = (data.current.table ?? []).find((r) => r.tid === m.tid);
+  const rank = row?.seed || data.current.standings.findIndex((t) => same(t.name, m.team)) + 1;
+  const cur = row ?? data.current.standings.find((t) => same(t.name, m.team));
   const at = data.alltime.find((r) => same(r.team, m.team));
 
   // კვირების გრაფიკი: მიმდინარე სეზონი (თუ კვირები უკვე დასრულდა), თორემ ბოლო დასრულებული
@@ -203,6 +209,7 @@ export default function TeamProfile() {
   const win = opp ? projectedWin(data, m.team, opp) : null;
   const oppTid = opp ? data.managers.find((x) => same(x.team, opp))?.tid : undefined;
   const seasonPts = m.roster.reduce((n, p) => n + (p.total ?? 0), 0);
+  const block = tradeBlock;
   const roster = [...m.roster].sort((a, b) => (b.total ?? 0) - (a.total ?? 0) || b.per_game - a.per_game);
 
   return (
@@ -301,42 +308,45 @@ export default function TeamProfile() {
               {m.roster.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-white/15 p-4 text-sm text-muted-foreground">როსტერი დრაფტის შემდეგ გამოჩნდება.</p>
               ) : (
-                <div className="-mx-2">
-                  <div className="grid grid-cols-[1fr_auto] gap-3 px-2 pb-2 text-[11px] text-muted-foreground sm:grid-cols-[1fr_44px_150px_64px]">
-                    <span>მოთამაშე</span>
-                    <span className="hidden text-right sm:block">თამ.</span>
-                    <span className="hidden text-right sm:block">PTS · REB · AST</span>
-                    <span className="text-right">ქულა</span>
-                  </div>
-                  <div className="divide-y divide-white/[0.05]">
-                    {roster.map((p) => (
-                      <div key={p.pid} className="grid grid-cols-[1fr_auto] items-center gap-3 px-2 py-2 sm:grid-cols-[1fr_44px_150px_64px]">
-                        <div className="flex min-w-0 items-center gap-3">
-                          <PlayerPhoto pid={p.pid} className="h-9 w-9 shrink-0 rounded-full bg-muted object-cover" />
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <Link to={`/player/${p.pid}`} className="truncate text-sm font-medium hover:underline">
-                                {p.name}
-                              </Link>
-                              {p.injury && <span className="shrink-0 rounded bg-loss/15 px-1 text-[9px] font-medium text-loss">{p.injury.replace(/_/g, " ")}</span>}
-                            </div>
-                            <div className="text-[11px] text-muted-foreground">
-                              {p.pos} · {p.pro}
-                              {p.week_left > 0 && <span> · {p.week_left} თამ. ამ კვირაში</span>}
-                            </div>
+                <div className="space-y-2">
+                  {roster.map((p) => (
+                    <Link
+                      key={p.pid}
+                      to={`/player/${p.pid}`}
+                      className={cn("flex items-center gap-3 rounded-xl border border-white/[0.06] p-2.5 transition-colors hover:border-white/20", isOut(p.injury) && "opacity-60")}
+                    >
+                      <span className="relative shrink-0 self-start">
+                        <PlayerPhoto pid={p.pid} className="h-11 w-11 rounded-full bg-muted object-cover" />
+                        {p.slot && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded bg-zinc-800 px-1 font-mono text-[9px] leading-4 text-muted-foreground">{p.slot}</span>}
+                      </span>
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate text-sm font-semibold">{p.name}</span>
+                          {p.injury && <span className="shrink-0 rounded bg-loss/15 px-1 text-[9px] font-semibold text-loss">{injuryLabel(p.injury)}</span>}
+                          {block.blockIds.has(p.pid) && <span className="shrink-0 rounded bg-[hsl(var(--blue))]/15 px-1 text-[9px] font-semibold text-[hsl(var(--blue))]">გასაყიდად</span>}
+                          {block.lockIds.has(p.pid) && <Lock className="h-3 w-3 shrink-0 text-gold" aria-label="ხელშეუხებელი" />}
+                        </div>
+                        <div className="truncate text-[11px] text-muted-foreground">
+                          {p.pos} · {p.pro}
+                          {p.week_left > 0 && <span> · {p.week_left} თამ. ამ კვირაში</span>}
+                        </div>
+                        {p.season_line && p.gp > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {(["PTS", "REB", "AST"] as const).map((k) => (
+                              <span key={k} className="inline-flex items-baseline gap-1 rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[11px] tabular">
+                                <span className="font-semibold">{p.season_line![k]}</span>
+                                <span className="text-[9px] text-muted-foreground">{k}</span>
+                              </span>
+                            ))}
                           </div>
-                        </div>
-                        <span className="hidden text-right text-sm text-muted-foreground tabular sm:block">{p.gp || "-"}</span>
-                        <span className="hidden text-right text-sm text-muted-foreground tabular sm:block">
-                          {p.season_line && p.gp ? `${p.season_line.PTS} · ${p.season_line.REB} · ${p.season_line.AST}` : "-"}
-                        </span>
-                        <div className="text-right">
-                          <div className="text-sm font-semibold tabular">{p.total ? fmt(p.total) : "-"}</div>
-                          <div className="text-[10px] text-muted-foreground tabular">{p.gp ? `${p.avg}/თამ.` : `პროგ. ${p.per_game}`}</div>
-                        </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
+                      <div className="shrink-0 text-right">
+                        <div className="text-lg font-semibold leading-none tabular">{p.total ? fmt(p.total) : "-"}</div>
+                        <div className="mt-1 text-[10px] text-muted-foreground tabular">{p.gp ? `${p.avg} × ${p.gp}` : `პროგ. ${p.per_game}`}</div>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
               )}
             </Section>
@@ -345,37 +355,65 @@ export default function TeamProfile() {
               {/* ამ კვირის მატჩი */}
               {opp && (
                 <Section icon={<Swords className="h-4 w-4" />} title={`კვირა ${week}`} sub="ამ კვირის მატჩი">
-                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                    <div className="min-w-0">
-                      <TeamAvatar name={m.team} size={36} badge={false} />
-                      <div className="mt-2 truncate text-sm font-medium">{clean(m.team)}</div>
-                      <div className="text-2xl font-semibold tabular">{mine ? fmt(Math.round(mine.so_far)) : "-"}</div>
-                    </div>
-                    <span className="text-xs text-muted-foreground">vs</span>
-                    <Link to={oppTid ? `/team/${oppTid}` : "/live"} className="min-w-0 text-right">
-                      <div className="flex justify-end">
-                        <TeamAvatar name={opp} size={36} badge={false} />
+                  <Link to={oppTid ? `/team/${oppTid}` : "/live"} className="block space-y-2.5">
+                    {(
+                      [
+                        [m.team, mine?.so_far ?? 0, win ?? 0.5, "--red"],
+                        [opp, theirs?.so_far ?? 0, 1 - (win ?? 0.5), "--blue"],
+                      ] as const
+                    ).map(([name, score, w, color], i) => {
+                      const lead = score >= (i === 0 ? theirs?.so_far ?? 0 : mine?.so_far ?? 0);
+                      return (
+                        <div key={name} className="flex items-center gap-3">
+                          <span className="h-8 w-1 shrink-0 rounded-full" style={{ background: `hsl(var(${color}))`, opacity: lead ? 1 : 0.35 }} />
+                          <TeamAvatar name={name} size={34} badge={false} />
+                          <span className={cn("min-w-0 flex-1 truncate text-sm", lead ? "font-semibold" : "text-muted-foreground")}>{clean(name)}</span>
+                          <span className="text-[11px] text-muted-foreground tabular">{Math.round(w * 100)}%</span>
+                          <span className={cn("w-16 text-right text-2xl font-semibold tabular", !lead && "text-muted-foreground")}>{fmt(Math.round(score))}</span>
+                        </div>
+                      );
+                    })}
+                    {win != null && (
+                      <div className="space-y-1 pt-1">
+                        <div className="flex h-1 overflow-hidden rounded-full bg-white/10">
+                          <div className="bg-[hsl(var(--red))]" style={{ width: `${win * 100}%` }} />
+                          <div className="w-0.5 bg-card" />
+                          <div className="flex-1 bg-[hsl(var(--blue))]" />
+                        </div>
+                        <div className="flex justify-between text-[10px] text-muted-foreground tabular">
+                          <span>{mine ? `${mine.games_left} თამაში დარჩა` : ""}</span>
+                          <span>
+                            პროგნოზი {mine ? fmt(Math.round(mine.final)) : "-"} : {theirs ? fmt(Math.round(theirs.final)) : "-"}
+                          </span>
+                        </div>
                       </div>
-                      <div className="mt-2 truncate text-sm font-medium hover:underline">{clean(opp)}</div>
-                      <div className="text-2xl font-semibold tabular">{theirs ? fmt(Math.round(theirs.so_far)) : "-"}</div>
-                    </Link>
+                    )}
+                  </Link>
+                </Section>
+              )}
+
+              {/* გუნდის სეზონის სტატისტიკა ESPN-იდან, ადგილით ლიგაში */}
+              {row && Object.keys(row.stats ?? {}).length > 0 && (
+                <Section icon={<BarChart3 className="h-4 w-4" />} title="სეზონის სტატისტიკა" sub="ჯამი სეზონში და ადგილი ლიგაში">
+                  <div className="space-y-2.5">
+                    {TEAM_STATS.map((k) => {
+                      const all = (data.current.table ?? []).map((r) => r.stats?.[k] ?? 0);
+                      const v = row.stats[k] ?? 0;
+                      const lower = k === "TO";
+                      const place = all.filter((x) => (lower ? x < v : x > v)).length + 1;
+                      const top = Math.max(1, ...all);
+                      return (
+                        <div key={k} className="grid grid-cols-[40px_1fr_56px_56px] items-center gap-3 text-sm">
+                          <span className="text-xs text-muted-foreground">{k}</span>
+                          <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+                            <div className={cn("bar-fill h-full rounded-full", place <= 2 ? "bg-win/70" : place >= all.length - 1 ? "bg-loss/50" : "bg-white/35")} style={{ width: `${(v / top) * 100}%` }} />
+                          </div>
+                          <span className="text-right font-semibold tabular">{fmt(v)}</span>
+                          <span className={cn("text-right text-xs tabular", place === 1 ? "text-gold" : "text-muted-foreground")}>#{place}</span>
+                        </div>
+                      );
+                    })}
                   </div>
-                  {win != null && (
-                    <div className="mt-4 space-y-1.5">
-                      <div className="flex justify-between text-xs text-muted-foreground tabular">
-                        <span>
-                          მოგების შანსი <b className="text-foreground">{Math.round(win * 100)}%</b>
-                        </span>
-                        <span>
-                          პროგნოზი {mine ? fmt(Math.round(mine.final)) : "-"} : {theirs ? fmt(Math.round(theirs.final)) : "-"}
-                        </span>
-                      </div>
-                      <div className="flex h-1.5 overflow-hidden rounded-full bg-white/10">
-                        <div className="bg-foreground transition-all duration-700" style={{ width: `${win * 100}%` }} />
-                      </div>
-                      {mine && <div className="text-[11px] text-muted-foreground">{mine.games_left} თამაში დარჩა</div>}
-                    </div>
-                  )}
                 </Section>
               )}
 

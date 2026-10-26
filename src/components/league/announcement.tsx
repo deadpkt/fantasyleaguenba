@@ -1,9 +1,8 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Megaphone, Pin, SmilePlus } from "lucide-react";
 import type { Announcement } from "@/types";
-import { cn, tone } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
 import ShareButton from "@/components/league/ShareButton";
 
 /** კალათბურთის ბურთი (SVG) */
@@ -253,72 +252,77 @@ export function DateTile({ a, tone: t, big }: { a: Announcement; tone: keyof typ
   );
 }
 
-/** განცხადების ბარათი — გამოიყენება მთავარზე, სიახლეებსა და განცხადებების გვერდზე */
+/** "3 სთ წინ", "2 დღის წინ", ძველზე თარიღი */
+export function annAgo(a: Announcement) {
+  const t = +new Date(a.created || a.date || "");
+  if (!t) return fmtAnnDate(a);
+  const s = Math.max(1, Math.round((Date.now() - t) / 1000));
+  if (s < 3600) return `${Math.max(1, Math.round(s / 60))} წთ წინ`;
+  if (s < 86400) return `${Math.round(s / 3600)} სთ წინ`;
+  if (s < 86400 * 7) return `${Math.round(s / 86400)} დღის წინ`;
+  return new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+/** ავტორის ავატარი: კომისარი = ლიგის ლოგო, ავტომატური = ESPN ხატულა */
+function Author({ a }: { a: Announcement }) {
+  if (a.auto)
+    return (
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[hsl(var(--blue))]/15 text-[hsl(var(--blue))]">
+        <Megaphone className="h-[18px] w-[18px]" />
+      </span>
+    );
+  return <img src="/icon-192.png" alt="" className="h-10 w-10 shrink-0 rounded-full border border-white/10" />;
+}
+
+/** განცხადების ბარათი, პოსტის სტილში — გამოიყენება მთავარზე, სიახლეებსა და განცხადებების გვერდზე */
 export function AnnouncementCard({ a, index = 0, compact, actions }: { a: Announcement; index?: number; compact?: boolean; actions?: ReactNode }) {
-  const accent = a.pinned ? "gold" : a.auto ? "blue" : "red";
   const selected = Boolean(a.id && new URLSearchParams(window.location.search).get("announcement") === a.id);
   const shareUrl = a.id ? `${window.location.origin}/api/announcements?preview=${encodeURIComponent(a.id)}` : window.location.href;
   return (
     <Card
       id={a.id ? `announcement-${a.id}` : undefined}
-      className={cn("tone-card lift pass-in group scroll-mt-28", selected && "ring-2 ring-orange-400 ring-offset-2 ring-offset-background")}
-      style={{ ...tone(accent), animationDelay: `${index * 90}ms` }}
+      className={cn(
+        "pass-in group scroll-mt-28 overflow-hidden rounded-2xl",
+        a.pinned && "border-[hsl(var(--gold))]/30",
+        selected && "ring-2 ring-orange-400 ring-offset-2 ring-offset-background",
+      )}
+      style={{ animationDelay: `${index * 60}ms` }}
     >
-      {/* ფერადი ზოლი მარცხნივ: მიმაგრებული / კომისარი / ESPN */}
-      <span aria-hidden className={cn("absolute inset-y-0 left-0 w-1 bg-gradient-to-b", ACCENT[accent])} />
-      <CardHeader className={cn("relative", compact ? "pb-2 pt-4" : "pb-3")}>
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-start gap-3.5">
-            <DateTile a={a} tone={accent} big={!compact} />
-            <div className="min-w-0 space-y-1.5">
-              <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                {a.pinned && (
-                  <Badge variant="gold" className="gap-1 py-0">
-                    <Pin className="h-3 w-3" /> მიმაგრებული
-                  </Badge>
-                )}
-                {isNew(a) && (
-                  <Badge className="gap-1.5 border-orange-500/30 bg-orange-500/15 py-0 text-orange-300 hover:bg-orange-500/15">
-                    <span className="relative flex h-1.5 w-1.5">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
-                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-orange-400" />
-                    </span>
-                    ახალი
-                  </Badge>
-                )}
-                <span className="flex items-center gap-1">
-                  {a.auto ? <Megaphone className="h-3 w-3" /> : <Ball className="h-3 w-3 transition-transform duration-500 group-hover:rotate-[360deg]" />}
-                  {a.auto ? "ავტომატური · ESPN" : "კომისარი"}
+      <div className={cn("space-y-3", compact ? "p-4" : "p-4 sm:p-5")}>
+        <div className="flex items-center gap-3">
+          <Author a={a} />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
+              <span className="font-semibold">{a.auto ? "ESPN" : "კომისარი"}</span>
+              {a.pinned && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gold">
+                  <Pin className="h-3 w-3" /> მიმაგრებული
                 </span>
-              </div>
-              <CardTitle className={cn("leading-snug tracking-tight", compact ? "text-base" : "text-xl")}>{a.title}</CardTitle>
+              )}
+              {isNew(a) && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/15 px-1.5 text-[10px] font-semibold text-orange-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-orange-400" /> ახალი
+                </span>
+              )}
             </div>
+            <div className="text-xs text-muted-foreground">{a.auto ? "ავტომატური შეხსენება" : "ლიგის განცხადება"} · {annAgo(a)}</div>
           </div>
           <div className="flex shrink-0 gap-1">
             {a.id && <ShareButton title={a.title} text={a.text ?? ""} url={shareUrl} iconOnly />}
             {actions}
           </div>
         </div>
-      </CardHeader>
-      {a.text && (
-        <CardContent className={cn("relative whitespace-pre-line text-[15px] leading-relaxed text-muted-foreground", compact && "line-clamp-3 text-sm", a.id ? "pb-3" : compact && "pb-4")}>
-          {a.text}
-        </CardContent>
-      )}
-      {a.image && (
-        <div className={cn("relative px-6", a.id ? "pb-3" : "pb-5")}>
+
+        <h3 className={cn("font-semibold leading-snug tracking-tight", compact ? "text-base" : "text-lg sm:text-xl")}>{a.title}</h3>
+        {a.text && <p className={cn("whitespace-pre-line leading-relaxed text-muted-foreground", compact ? "line-clamp-3 text-sm" : "text-[15px]")}>{a.text}</p>}
+        {a.image && (
           <div className="overflow-hidden rounded-xl border border-white/10">
-            <img
-              src={a.image}
-              alt={a.title}
-              loading="lazy"
-              className={cn("w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]", compact ? "max-h-56" : "max-h-[32rem]")}
-            />
+            <img src={a.image} alt={a.title} loading="lazy" className={cn("w-full object-cover", compact ? "max-h-56" : "max-h-[32rem]")} />
           </div>
-        </div>
-      )}
+        )}
+      </div>
       {a.id && (
-        <div className={cn("relative mx-6 border-t border-white/[0.06] pb-4 pt-3", !a.text && "mt-1")}>
+        <div className="border-t border-white/[0.06] px-4 py-3 sm:px-5">
           <Reactions id={a.id} initial={a.reactions} />
         </div>
       )}

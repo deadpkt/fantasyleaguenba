@@ -39,7 +39,7 @@ function Bars({ values }: { values: number[] }) {
           key={i}
           className={cn(
             "bar-grow flex-1 origin-bottom rounded-t-sm",
-            i === hi ? "bg-[hsl(var(--blue))] shadow-[0_0_12px_hsl(var(--blue)/0.6)]" : "bg-[hsl(var(--blue)/0.25)]",
+            i === hi ? "bg-[hsl(var(--blue))]" : "bg-[hsl(var(--blue)/0.25)]",
           )}
           style={{ height: `${15 + ((v - min) / Math.max(1, max - min)) * 85}%`, animationDelay: `${200 + i * 35}ms` }}
         />
@@ -50,9 +50,9 @@ function Bars({ values }: { values: number[] }) {
 
 function ChampStat({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="rounded-xl border border-amber-400/15 bg-gradient-to-b from-amber-400/[0.07] to-transparent px-3.5 py-2.5 transition-colors duration-300 group-hover:border-amber-400/25">
-      <div className="text-[11px] font-medium uppercase tracking-wider text-amber-200/60">{label}</div>
-      <div className="mt-0.5 text-xl font-bold tabular sm:text-2xl">{value}</div>
+    <div className="border-l border-white/[0.08] pl-3.5">
+      <div className="text-[11px] text-muted-foreground">{label}</div>
+      <div className="mt-0.5 text-xl font-semibold tabular sm:text-2xl">{value}</div>
     </div>
   );
 }
@@ -60,7 +60,6 @@ function ChampStat({ label, value }: { label: string; value: ReactNode }) {
 /** გასული (დასრულებული) სეზონის მთავარი ამბები: ჩემპიონი, MVP, რეკორდული კვირა, Steal, იღბალი */
 export default function LastSeason() {
   const data = useData();
-  const { current } = data;
   const champ = data.champions[data.champions.length - 1];
   const last = data.seasons.find((s) => s.complete);
   const champRow = last?.standings.find((t) => t.final === 1);
@@ -91,8 +90,8 @@ export default function LastSeason() {
               </div>
 
               <CardHeader className="relative">
-                <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 py-1 text-xs font-medium text-amber-200">
-                  <Crown className="h-3.5 w-3.5 text-gold" /> მოქმედი ჩემპიონი · {champ.season}
+                <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                  <Crown className="h-3.5 w-3.5 text-gold" /> ჩემპიონი · {champ.season}
                 </span>
               </CardHeader>
               <CardContent className="relative space-y-6">
@@ -111,23 +110,18 @@ export default function LastSeason() {
                     )}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <div className="grid grid-cols-2 gap-y-3 sm:grid-cols-3">
                   <ChampStat label="რეკორდი" value={champ.rec} />
                   {champRow && <ChampStat label="ქულა სეზონში" value={<CountUp value={champRow.pf} />} />}
                   {streak && plain(streak.who) === plain(champ.team) && <ChampStat label="მოგება ზედიზედ" value={<CountText text={streak.v} />} />}
                 </div>
-                <p className="flex items-center gap-2 text-sm text-amber-100/70">
-                  <span className="h-px w-6 bg-gradient-to-r from-amber-400 to-transparent" />
-                  მოქმედი ჩემპიონი. {current.label}-ში ყველა მის დამარცხებას ეცდება.
-                </p>
               </CardContent>
             </Card>
           )}
 
           {mvp && (
             <Card className="tone-card lift flex flex-col md:col-span-2 md:row-span-2" style={tone("red")}>
-              <div className="relative h-48 overflow-hidden border-b border-white/5">
-                <div className="absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_100%,hsl(var(--red)/0.35),transparent_70%)]" />
+              <div className="relative h-48 overflow-hidden border-b border-white/5 bg-white/[0.02]">
                 <PlayerPhoto pid={mvp.pid} className="relative mx-auto h-full w-auto object-contain" />
               </div>
               <CardHeader className="pb-2">
@@ -135,7 +129,7 @@ export default function LastSeason() {
                 <CardTitle className="text-2xl">{mvp.player}</CardTitle>
               </CardHeader>
               <CardContent className="mt-auto">
-                <div className="text-4xl font-bold tabular text-[hsl(var(--red))]">
+                <div className="text-4xl font-semibold tabular">
                   <CountUp value={mvp.total} /> <span className="text-sm font-normal text-muted-foreground">FP</span>
                 </div>
                 <div className="text-sm text-muted-foreground">{mvp.avg} ქულა თამაშში</div>
@@ -149,7 +143,7 @@ export default function LastSeason() {
                 <CardDescription className="flex items-center gap-2">
                   <Flame className="h-4 w-4 text-[hsl(var(--blue))]" /> რეკორდული კვირა
                 </CardDescription>
-                <CardTitle className="text-4xl tabular text-[hsl(var(--blue))]">
+                <CardTitle className="text-4xl font-semibold tabular">
                   <CountText text={high.v} />
                 </CardTitle>
               </CardHeader>
@@ -179,7 +173,7 @@ export default function LastSeason() {
               <CardContent className="space-y-2">
                 <div className="flex items-center gap-3 text-3xl font-bold tabular">
                   <span className="text-muted-foreground line-through decoration-2">#{steal.n}</span>
-                  <span className="h-px flex-1 bg-gradient-to-r from-muted-foreground/50 to-[hsl(var(--win))]" />
+                  <span className="h-px flex-1 bg-white/15" />
                   <span className="text-win">#{steal.rank}</span>
                 </div>
                 <div className="text-sm text-muted-foreground">
@@ -201,7 +195,7 @@ export default function LastSeason() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <div className="text-3xl font-bold tabular text-gold">
+                <div className="text-3xl font-semibold tabular">
                   <CountUp value={lucky.luck * 100} decimals={1} prefix={lucky.luck >= 0 ? "+" : ""} suffix="%" />
                 </div>
                 {(

@@ -22,6 +22,34 @@ export interface CurrentSeason {
   draft: DraftInfo | null;
   /** რეგულარული სეზონის კალენდარი (პლეიოფის შანსებისთვის) */
   schedule: SchedGame[];
+  /** ESPN-ის Standings: სრული ცხრილი და გუნდების სეზონის სტატისტიკა */
+  table?: TableRow[];
+}
+
+export interface TableRow {
+  tid: number;
+  name: string;
+  abbrev: string;
+  seed: number;
+  w: number;
+  l: number;
+  t: number;
+  pct: number;
+  gb: number;
+  pf: number;
+  pa: number;
+  streak: string;
+  /** x = პლეიოფში გავიდა, y = დივიზიონი, z = პირველი რაუნდი თავისუფალი, e = გავარდა */
+  clinch: string;
+  acq: number;
+  drops: number;
+  trades: number;
+  moves: number;
+  proj_rank: number | null;
+  stats: Record<string, number>;
+  /** ESPN-ის ტრეიდის ბლოკი: გასაყიდად გამოტანილი და ხელშეუხებელი მოთამაშეები (pid) */
+  on_block?: number[];
+  untouchable?: number[];
 }
 
 export interface SchedGame {

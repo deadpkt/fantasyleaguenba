@@ -35,7 +35,7 @@ export function normalizeLeague(d: LeagueData): LeagueData {
     waivers: (d.waivers ?? []).map((w) => player(w as WaiverPlayer)),
     current_draft: d.current_draft ?? [],
     projections: d.projections ?? null,
-    current: { ...d.current, schedule: d.current?.schedule ?? [] },
+    current: { ...d.current, schedule: d.current?.schedule ?? [], table: d.current?.table ?? [] },
     seasons: d.seasons ?? [],
     trades: d.trades ? { current: d.trades.current ?? [], past: d.trades.past ?? [] } : undefined,
     activity: d.activity ?? [],

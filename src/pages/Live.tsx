@@ -14,107 +14,144 @@ import PageHeader from "@/components/layout/PageHeader";
 import { PlayerPhoto, TeamAvatar } from "@/components/league/team";
 import Updated from "@/components/league/Updated";
 import { normalizeLive } from "@/lib/normalize";
+import { useMyTeam } from "@/lib/myTeam";
 import { TeamCalendar, WeekPlanner } from "@/components/league/WeekSchedule";
+import { LiveNow } from "@/components/league/LiveStrip";
 
 const pts = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 const tbilisi = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Tbilisi" });
 type View = "today" | "week" | "plan";
 
-/** "45 PTS · 7 REB · 6 AST · 17/25 FG · 32'" — ნულოვანებს (გარდა PTS/REB/AST) არ ვაჩვენებთ */
-function Line({ s }: { s: StatLine }) {
-  const parts: [string, string][] = [
-    [`${s.PTS}`, "PTS"],
-    [`${s.REB}`, "REB"],
-    [`${s.AST}`, "AST"],
+/* ── მოთამაშის ბარათები: სტატუსის მიხედვით დაჯგუფებული ── */
+const value = (p: LivePlayer, view: View) => (view === "today" ? p.today : p.points);
+
+/** სტატისტიკა პატარა "ჩიპებად": ძირითადი სამი ყოველთვის, დანარჩენი მხოლოდ თუ 0 არ არის */
+function Chips({ s }: { s: StatLine }) {
+  const list: [string, string][] = [
+    ["PTS", `${s.PTS}`],
+    ["REB", `${s.REB}`],
+    ["AST", `${s.AST}`],
   ];
-  if (s.STL) parts.push([`${s.STL}`, "STL"]);
-  if (s.BLK) parts.push([`${s.BLK}`, "BLK"]);
-  if (s["3PM"]) parts.push([`${s["3PM"]}`, "3PM"]);
-  if (s.TO) parts.push([`${s.TO}`, "TO"]);
-  parts.push([`${s.FGM}/${s.FGA}`, "FG"]);
-  if (s.FTA) parts.push([`${s.FTM}/${s.FTA}`, "FT"]);
-  if (s.MIN) parts.push([`${s.MIN}'`, ""]);
+  if (s.STL) list.push(["STL", `${s.STL}`]);
+  if (s.BLK) list.push(["BLK", `${s.BLK}`]);
+  if (s["3PM"]) list.push(["3PM", `${s["3PM"]}`]);
+  if (s.TO) list.push(["TO", `${s.TO}`]);
+  list.push(["FG", `${s.FGM}/${s.FGA}`]);
   return (
-    <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] tabular text-muted-foreground">
-      {parts.map(([v, l]) => (
-        <span key={l || "min"}>
-          <span className="text-foreground/85">{v}</span>
-          {l && <span className="ml-0.5 text-[9px] uppercase">{l}</span>}
+    <div className="flex flex-wrap gap-1">
+      {list.map(([k, v]) => (
+        <span key={k} className="inline-flex items-baseline gap-1 rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[11px] tabular">
+          <span className="font-semibold text-foreground">{v}</span>
+          <span className="text-[9px] text-muted-foreground">{k}</span>
         </span>
       ))}
     </div>
   );
 }
 
-function Status({ p }: { p: LivePlayer }) {
-  if (p.status === "live")
-    return (
-      <span className="inline-flex items-center gap-1 rounded bg-[hsl(var(--red))]/15 px-1 text-[10px] font-semibold text-[hsl(var(--red))]">
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[hsl(var(--red))]" /> LIVE
-      </span>
-    );
-  if (p.status === "final") return <span className="rounded bg-white/[0.06] px-1 text-[10px] text-muted-foreground">დასრულდა</span>;
-  if (p.status === "upcoming") return <span className="rounded bg-[hsl(var(--blue))]/15 px-1 text-[10px] text-[hsl(var(--blue))]">{p.tip ? tbilisi(p.tip) : "დღეს"}</span>;
-  return <span className="text-[10px] text-muted-foreground/60">დღეს არ თამაშობს</span>;
-}
-
-function PlayerRow({ p, view }: { p: LivePlayer; view: View }) {
+function PlayerCard({ p, view }: { p: LivePlayer; view: View }) {
+  const v = value(p, view);
   const line = view === "today" ? p.today_line : p.week_line;
-  const value = view === "today" ? p.today : p.points;
+  const live = view === "today" && p.status === "live";
+  // რამდენად კარგად თამაშობს: დღეს = მის ჩვეულ საშუალოსთან, კვირა = საშუალო × ნათამაშები
+  const base = view === "today" ? p.per_game : p.per_game * Math.max(1, p.week_games - p.week_left);
+  const share = base > 0 ? Math.min(1.5, v / base) : 0;
+  const played = (line?.MIN ?? 0) > 0;
+  let info: React.ReactNode;
+  if (view === "week") info = p.week_left > 0 ? `${p.week_left} თამაში დარჩა` : "კვირა დაასრულა";
+  else if (live) info = <span className="font-medium text-[hsl(var(--red))]">LIVE · {line?.MIN ?? 0}'</span>;
+  else if (p.status === "final") info = `დასრულდა · ${line?.MIN ?? 0}'`;
+  else if (p.status === "upcoming") info = <span className="text-[hsl(var(--blue))]">{p.tip ? tbilisi(p.tip) : "დღეს"}</span>;
+  else info = "დღეს არ თამაშობს";
+
   return (
-    <div className={cn("flex items-center gap-2.5 py-2", p.status === "live" && view === "today" && "rounded-lg bg-[hsl(var(--red))]/[0.06] px-1.5")}>
-      <span className="w-7 shrink-0 font-mono text-[10px] text-muted-foreground">{p.slot}</span>
-      <PlayerPhoto pid={p.pid} className="h-9 w-9 shrink-0 rounded-full border bg-muted object-cover" />
-      <div className="min-w-0 flex-1 space-y-0.5">
-        <div className="flex items-center gap-1.5">
-          <Link to={`/player/${p.pid}`} className="truncate text-sm font-medium hover:underline">
-            {p.name}
-          </Link>
-          {p.injury && (
-            <Badge variant="loss" className="shrink-0 px-1 py-0 text-[9px]">
-              {p.injury.replace(/_/g, " ")}
-            </Badge>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-          <span>
-            {p.pro}
-            {p.opp && view === "today" ? ` vs ${p.opp}` : ""}
-          </span>
-          {view === "today" ? <Status p={p} /> : <span>{p.week_left > 0 ? `${p.week_left} თამაში დარჩა` : "კვირა დაასრულა"}</span>}
-        </div>
-        {line && line.MIN > 0 && <Line s={line} />}
+    <div className={cn("flex gap-3 rounded-xl border p-3 transition-colors", live ? "border-[hsl(var(--red))]/40 bg-[hsl(var(--red))]/[0.05]" : "border-white/[0.06] bg-white/[0.02]")}>
+      <div className="relative shrink-0 self-start">
+        <PlayerPhoto pid={p.pid} className="h-12 w-12 rounded-full bg-muted object-cover" />
+        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded bg-zinc-800 px-1 font-mono text-[9px] leading-4 text-muted-foreground">{p.slot}</span>
       </div>
-      <div className="w-12 shrink-0 text-right">
-        <div className={cn("text-base font-bold tabular", value > 0 ? "text-foreground" : "text-muted-foreground/60")}>{pts(value)}</div>
-        <div className="text-[9px] text-muted-foreground">{view === "today" ? "დღეს" : "კვირა"}</div>
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <Link to={`/player/${p.pid}`} className="truncate text-sm font-semibold hover:underline">
+                {p.name}
+              </Link>
+              {p.injury && <span className="shrink-0 rounded bg-loss/15 px-1 text-[9px] font-semibold text-loss">{p.injury === "DAY_TO_DAY" ? "DTD" : p.injury.replace(/_/g, " ")}</span>}
+            </div>
+            <div className="truncate text-[11px] text-muted-foreground">
+              {p.pro}
+              {p.opp && view === "today" ? ` vs ${p.opp}` : ""} · {info}
+            </div>
+          </div>
+          <div className="shrink-0 text-right">
+            <div className={cn("text-xl font-semibold leading-none tabular", v > 0 ? "text-foreground" : "text-muted-foreground/50")}>{pts(v)}</div>
+            {base > 0 && (played || view === "week") && (
+              <div className="mt-1.5 h-1 w-12 overflow-hidden rounded-full bg-white/10" title={`ჩვეულ საშუალოსთან: ${Math.round(share * 100)}%`}>
+                <div className={cn("h-full rounded-full", share >= 1 ? "bg-win" : "bg-white/40")} style={{ width: `${Math.min(100, share * 100)}%` }} />
+              </div>
+            )}
+          </div>
+        </div>
+        {line && played && <Chips s={line} />}
       </div>
     </div>
   );
 }
 
-function Lineup({ t, view }: { t: LiveTeam; view: View }) {
-  if (!t.starters.length && !t.bench.length) return <p className="py-2 text-xs text-muted-foreground">როსტერი დრაფტის შემდეგ გამოჩნდება.</p>;
+function Group({ title, list, view, dim }: { title: string; list: LivePlayer[]; view: View; dim?: boolean }) {
+  if (!list.length) return null;
   return (
-    <div>
-      <div className="divide-y divide-white/5">
-        {t.starters.map((p) => (
-          <PlayerRow key={p.pid} p={p} view={view} />
-        ))}
+    <div className={cn("space-y-2", dim && "opacity-60")}>
+      <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+        {title} <span className="tabular">{list.length}</span>
+        <span className="h-px flex-1 bg-white/[0.06]" />
       </div>
-      {t.bench.length > 0 && (
-        <div className="mt-2 border-t border-dashed border-white/10 pt-1 opacity-60">
-          <div className="pt-1 text-[10px] uppercase tracking-wider text-muted-foreground">სათადარიგო</div>
-          {t.bench.map((p) => (
-            <PlayerRow key={p.pid} p={p} view={view} />
-          ))}
+      {list.map((p) => (
+        <PlayerCard key={p.pid} p={p} view={view} />
+      ))}
+    </div>
+  );
+}
+
+function TeamPanel({ t, view }: { t: LiveTeam; view: View }) {
+  const [bench, setBench] = useState(false);
+  if (!t.starters.length && !t.bench.length) return <p className="py-2 text-xs text-muted-foreground">როსტერი დრაფტის შემდეგ გამოჩნდება.</p>;
+  const sorted = [...t.starters].sort((x, y) => value(y, view) - value(x, view));
+  const benchList = [...t.bench].sort((x, y) => value(y, view) - value(x, view));
+  return (
+    <div className="space-y-4">
+      {view === "today" ? (
+        <>
+          <Group title="ახლა თამაშობს" list={sorted.filter((p) => p.status === "live")} view={view} />
+          <Group title="დასრულდა" list={sorted.filter((p) => p.status === "final")} view={view} />
+          <Group title="ჯერ არ დაწყებულა" list={sorted.filter((p) => p.status === "upcoming")} view={view} />
+          <Group title="დღეს არ თამაშობს" list={sorted.filter((p) => p.status === "none")} view={view} dim />
+        </>
+      ) : (
+        <Group title="სასტარტო" list={sorted} view={view} />
+      )}
+      {benchList.length > 0 && (
+        <div className="space-y-2">
+          <button type="button" onClick={() => setBench(!bench)} className="flex w-full items-center gap-2 text-[11px] text-muted-foreground hover:text-foreground">
+            სათადარიგო <span className="tabular">{benchList.length}</span>
+            <span className="h-px flex-1 bg-white/[0.06]" />
+            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", bench && "rotate-180")} />
+          </button>
+          {bench && (
+            <div className="space-y-2 opacity-60">
+              {benchList.map((p) => (
+                <PlayerCard key={p.pid} p={p} view={view} />
+              ))}
+            </div>
+          )}
         </div>
       )}
       {view === "week" && (t.departed?.length ?? 0) > 0 && (
-        <div className="mt-2 border-t border-dashed border-white/10 pt-2 text-xs text-muted-foreground">
-          <div className="pb-1 text-[10px] uppercase tracking-wider">წავიდა, ქულა რჩება</div>
+        <div className="rounded-xl border border-dashed border-white/10 p-3 text-xs text-muted-foreground">
+          <div className="pb-1 text-[10px]">წავიდა, ქულა გუნდს რჩება</div>
           {t.departed!.map((p) => (
-            <div key={p.pid} className="flex justify-between py-0.5">
+            <div key={p.pid} className="flex justify-between">
               <span>{p.name}</span>
               <span className="tabular">{pts(p.points)}</span>
             </div>
@@ -125,75 +162,127 @@ function Lineup({ t, view }: { t: LiveTeam; view: View }) {
   );
 }
 
-function Side({ t, side, lead }: { t: LiveTeam; side: "away" | "home"; lead: boolean }) {
+/** ტელეფონზე: ერთი გუნდი ერთდროულად (გადამრთველით); კომპიუტერზე: ორივე გვერდიგვერდ */
+function Rosters({ away, home, view }: { away: LiveTeam; home: LiveTeam; view: View }) {
+  const myTid = useMyTeam();
+  const [pick, setPick] = useState<0 | 1>(home.tid != null && home.tid === myTid ? 1 : 0);
+  const teams = [away, home];
+  const total = (t: LiveTeam) => pts(view === "today" ? t.today : t.score);
   return (
-    <div className={cn("flex min-w-0 flex-1 flex-col gap-2", side === "home" && "items-end text-right")}>
-      <div className={cn("flex min-w-0 items-center gap-2.5", side === "home" && "flex-row-reverse")}>
-        <TeamAvatar name={t.name} size={42} />
-        <div className={cn("min-w-0 truncate text-sm font-medium", lead ? "text-foreground" : "text-muted-foreground")}>{clean(t.name)}</div>
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1 md:hidden">
+        {teams.map((t, i) => (
+          <button
+            key={t.name}
+            type="button"
+            onClick={() => setPick(i as 0 | 1)}
+            className={cn("flex min-w-0 items-center justify-center gap-2 rounded-lg px-2 py-2 text-xs transition-colors", pick === i ? "bg-white text-black" : "text-muted-foreground")}
+          >
+            <span className="truncate font-medium">{clean(t.name)}</span>
+            <span className="shrink-0 font-semibold tabular">{total(t)}</span>
+          </button>
+        ))}
       </div>
-      <div className={cn("text-3xl font-extrabold tabular leading-none sm:text-4xl", lead ? "text-foreground" : "text-muted-foreground")}>{pts(t.score)}</div>
-      <div className="space-y-0.5 text-[11px] text-muted-foreground tabular">
-        {t.today > 0 && <div className="text-win">+{pts(t.today)} დღეს</div>}
-        {t.projected != null && (
-          <div>
-            პროგნოზი <b className="text-foreground/90">{Math.round(t.projected)}</b>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        {teams.map((t, i) => (
+          <div key={t.name} className={cn(pick !== i && "hidden md:block")}>
+            <div className="mb-3 hidden items-baseline justify-between md:flex">
+              <span className="truncate text-sm font-medium">{clean(t.name)}</span>
+              <span className="text-sm tabular text-muted-foreground">
+                <b className="text-foreground">{total(t)}</b> {view === "today" ? "დღეს" : "კვირაში"}
+              </span>
+            </div>
+            <TeamPanel t={t} view={view} />
           </div>
-        )}
-        {t.games_left != null && <div>{t.games_left} თამაში დარჩა</div>}
+        ))}
       </div>
     </div>
   );
 }
 
-type MatchupProps = { away: LiveTeam; home: LiveTeam; days: LiveDay[]; isPoints: boolean; open: boolean; onToggle: () => void; className?: string };
+/** ტაბლოს ერთი ხაზი: გუნდი, დღევანდელი/დარჩენილი, ახლა მოედანზე მყოფები, ანგარიში */
+function TeamRow({ t, lead, win, color }: { t: LiveTeam; lead: boolean; win: number; color: string }) {
+  const onCourt = t.starters.filter((p) => p.status === "live");
+  return (
+    <div className="flex items-center gap-3">
+      <span className="h-9 w-1 shrink-0 rounded-full" style={{ background: `hsl(var(${color}))`, opacity: lead ? 1 : 0.35 }} />
+      <TeamAvatar name={t.name} size={40} badge={false} />
+      <div className="min-w-0 flex-1">
+        <div className={cn("truncate text-[15px] font-semibold", !lead && "text-muted-foreground")}>{clean(t.name)}</div>
+        <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap text-[11px] text-muted-foreground tabular">
+          {t.today > 0 && <span className="text-win">+{pts(t.today)} დღეს</span>}
+          {(t.games_left ?? 0) > 0 && <span>{t.games_left} თამ. დარჩა</span>}
+          {onCourt.length > 0 && (
+            <span className="flex items-center">
+              {onCourt.slice(0, 3).map((p, i) => (
+                <span key={p.pid} className={cn("h-5 w-5 overflow-hidden rounded-full border border-[hsl(var(--red))] bg-muted", i > 0 && "-ml-1.5")}>
+                  <PlayerPhoto pid={p.pid} className="h-full w-full" />
+                </span>
+              ))}
+              {onCourt.length > 3 && <span className="ml-1 text-[hsl(var(--red))]">+{onCourt.length - 3}</span>}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="shrink-0 text-right">
+        <div className={cn("text-3xl font-semibold leading-none tabular", !lead && "text-muted-foreground")}>{pts(t.score)}</div>
+        <div className="mt-1 text-[11px] text-muted-foreground tabular">{Math.round(win * 100)}%</div>
+      </div>
+    </div>
+  );
+}
 
-const Matchup = forwardRef<HTMLDivElement, MatchupProps>(function Matchup({ away, home, days, isPoints, open, onToggle, className }, ref) {
+type MatchupProps = { away: LiveTeam; home: LiveTeam; days: LiveDay[]; isPoints: boolean; open: boolean; onToggle: () => void; mine?: boolean; className?: string };
+
+const Matchup = forwardRef<HTMLDivElement, MatchupProps>(function Matchup({ away, home, days, isPoints, open, onToggle, mine, className }, ref) {
   const [view, setView] = useState<View>("today");
   const awayWin = away.win ?? winProb(away, home);
   const live = [...away.starters, ...home.starters].filter((p) => p.status === "live").length;
+  const diff = Math.abs(away.score - home.score);
 
   return (
-    <Card ref={ref} className={cn("scroll-mt-24 overflow-hidden transition-all duration-500", open && "lg:col-span-2", className)}>
-      <CardContent className="space-y-4 p-4 sm:p-5">
-        <div className="flex items-start gap-3">
-          <Side t={away} side="away" lead={away.score > home.score} />
-          <div className="flex shrink-0 flex-col items-center gap-1 pt-12">
-            <span className="text-xs text-muted-foreground">VS</span>
-            {live > 0 && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[hsl(var(--red))]">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[hsl(var(--red))]" /> {live}
+    <Card ref={ref} className={cn("scroll-mt-24 overflow-hidden transition-colors", open && "lg:col-span-2", live > 0 && !open && "border-[hsl(var(--red))]/25", mine && "border-white/30", className)}>
+      <CardContent className="p-0">
+        <button type="button" onClick={onToggle} aria-expanded={open} className="block w-full space-y-3 p-4 text-left sm:p-5">
+          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+            {mine && <span className="mr-auto pr-2 font-semibold text-foreground">შენი მატჩი ·</span>}
+            {live > 0 ? (
+              <span className="inline-flex items-center gap-1.5 font-semibold text-[hsl(var(--red))]">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[hsl(var(--red))]" /> LIVE · {live} თამაშობს
               </span>
+            ) : (
+              <span>{diff > 0 ? `სხვაობა ${pts(diff)}` : "თანაბრადაა"}</span>
             )}
+            <span className="flex items-center gap-1">
+              {open ? "დაკეცვა" : isPoints ? "მოთამაშეები" : "როსტერები"}
+              <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-300", open && "rotate-180")} />
+            </span>
           </div>
-          <Side t={home} side="home" lead={home.score > away.score} />
-        </div>
-
-        {/* მოგების შანსი */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-xs tabular">
-            <span className={cn("font-semibold", awayWin >= 0.5 ? "text-[hsl(var(--red))]" : "text-muted-foreground")}>{Math.round(awayWin * 100)}%</span>
-            <span className="text-[11px] uppercase tracking-wider text-muted-foreground">მოგების შანსი</span>
-            <span className={cn("font-semibold", awayWin < 0.5 ? "text-[hsl(var(--blue))]" : "text-muted-foreground")}>{Math.round((1 - awayWin) * 100)}%</span>
+          <TeamRow t={away} lead={away.score >= home.score} win={awayWin} color="--red" />
+          <TeamRow t={home} lead={home.score >= away.score} win={1 - awayWin} color="--blue" />
+          <div className="space-y-1 pt-1">
+            <div className="flex h-1 overflow-hidden rounded-full bg-white/10">
+              <div className="bg-[hsl(var(--red))] transition-all duration-700" style={{ width: `${awayWin * 100}%` }} />
+              <div className="w-0.5 bg-card" />
+              <div className="flex-1 bg-[hsl(var(--blue))]" />
+            </div>
+            <div className="flex justify-between text-[10px] text-muted-foreground tabular">
+              <span>მოგების შანსი</span>
+              {away.projected != null && home.projected != null && (
+                <span>
+                  პროგნოზი {Math.round(away.projected)} : {Math.round(home.projected)}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="flex h-2 overflow-hidden rounded-full bg-white/10">
-            <div className="bg-gradient-to-r from-[hsl(var(--red))] to-[hsl(var(--red))]/70 transition-all duration-700" style={{ width: `${awayWin * 100}%` }} />
-            <div className="w-0.5 bg-black" />
-            <div className="flex-1 bg-gradient-to-l from-[hsl(var(--blue))] to-[hsl(var(--blue))]/70" />
-          </div>
-        </div>
-
-        <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={onToggle} aria-expanded={open}>
-          {open ? "დამალე" : isPoints ? "მოთამაშეები და სტატისტიკა" : "როსტერები"}
-          <ChevronDown className={cn("transition-transform duration-300", open && "rotate-180")} />
-        </Button>
+        </button>
 
         {/* რბილად იხსნება (grid-rows 0fr → 1fr) */}
         <div className={cn("grid transition-[grid-template-rows,opacity] duration-500 ease-out", open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")}>
           <div className="min-h-0 overflow-hidden">
-            <div className="space-y-3 border-t border-white/10 pt-3">
+            <div className="space-y-4 border-t border-white/[0.08] p-4 sm:p-5">
               <div className="flex justify-center">
-                <div className="flex rounded-lg border border-white/10 bg-white/[0.03] p-0.5">
+                <div className="flex rounded-full border border-white/10 bg-white/[0.03] p-1">
                   {(
                     [
                       ["today", "დღეს"],
@@ -203,28 +292,32 @@ const Matchup = forwardRef<HTMLDivElement, MatchupProps>(function Matchup({ away
                   )
                     .filter(([v]) => v !== "plan" || days.length > 0)
                     .map(([v, l]) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => setView(v)}
-                      className={cn("rounded-md px-3 py-1 text-xs transition-colors", view === v ? "bg-white text-black" : "text-muted-foreground hover:text-foreground")}
-                    >
-                      {l}
-                    </button>
-                  ))}
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setView(v)}
+                        className={cn("rounded-full px-3.5 py-1 text-xs transition-colors", view === v ? "bg-white text-black" : "text-muted-foreground hover:text-foreground")}
+                      >
+                        {l}
+                      </button>
+                    ))}
                 </div>
               </div>
-              <div className="grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-2">
-                {[away, home].map((t) => (
-                  <div key={t.name}>
-                    <div className="mb-1 flex items-center justify-between text-xs font-medium text-muted-foreground">
-                      <span>{clean(t.name)}</span>
-                      <span className="tabular">{view === "today" ? `${pts(t.today)} დღეს` : view === "week" ? `${pts(t.score)} კვირაში` : `${t.games_left ?? 0} თამაში დარჩა`}</span>
+              {view === "plan" ? (
+                <div className="grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-2">
+                  {[away, home].map((t) => (
+                    <div key={t.name}>
+                      <div className="mb-1 flex items-center justify-between text-xs font-medium text-muted-foreground">
+                        <span>{clean(t.name)}</span>
+                        <span className="tabular">{t.games_left ?? 0} თამაში დარჩა</span>
+                      </div>
+                      <TeamCalendar t={t} days={days} />
                     </div>
-                    {view === "plan" ? <TeamCalendar t={t} days={days} /> : <Lineup t={t} view={view} />}
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <Rosters away={away} home={home} view={view} />
+              )}
             </div>
           </div>
         </div>
@@ -233,37 +326,12 @@ const Matchup = forwardRef<HTMLDivElement, MatchupProps>(function Matchup({ away
   );
 });
 
-/** ვინ თამაშობს ახლა მთელ ლიგაში */
-function LiveNow({ data }: { data: LiveData }) {
-  const live = data.matchups
-    .flatMap((m) => [m.home, m.away])
-    .flatMap((t) => t.starters.filter((p) => p.status === "live").map((p) => ({ p, team: t.name })))
-    .sort((a, b) => b.p.today - a.p.today);
-  if (!live.length) return null;
-  return (
-    <Card className="mb-5 overflow-hidden">
-      <div className="flex items-center gap-3 overflow-x-auto p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-[hsl(var(--red))] px-2 py-1 text-[11px] font-bold text-white">
-          <Radio className="h-3 w-3 animate-pulse" /> ახლა თამაშობს
-        </span>
-        {live.map(({ p, team }) => (
-          <span key={p.pid} className="flex shrink-0 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] py-1 pl-1 pr-2.5">
-            <PlayerPhoto pid={p.pid} className="h-7 w-7 rounded-full bg-muted object-cover" />
-            <span className="text-xs">
-              <span className="font-medium">{p.name.split(" ").slice(-1)[0]}</span>
-              <span className="ml-1 text-muted-foreground">{clean(team).slice(0, 14)}</span>
-            </span>
-            <span className="text-sm font-bold tabular">{pts(p.today)}</span>
-          </span>
-        ))}
-      </div>
-    </Card>
-  );
-}
-
 export default function Live() {
   const { state, reload } = useApi<LiveData>("/api/live", 30_000);
   const data = state.status === "ready" ? normalizeLive(state.data) : null;
+  const myTid = useMyTeam();
+  const isMine = (m: { home: LiveTeam; away: LiveTeam }) => myTid != null && (m.home.tid === myTid || m.away.tid === myTid);
+  const matchups = data ? [...data.matchups].sort((x, y) => Number(isMine(y)) - Number(isMine(x))) : [];
   const anyLive = !!data?.matchups.some((m) => [...m.home.starters, ...m.away.starters].some((p) => p.status === "live"));
 
   // ერთი მატჩაფის გახსნისას დანარჩენები იმალება; ზემოთ ასქროლვისას ყველა ბრუნდება
@@ -292,16 +360,16 @@ export default function Live() {
 
   return (
     <>
-      <PageHeader title="Live მატჩაფები" description={data ? `კვირა ${data.period}. ანგარიში ავტომატურად ახლდება ყოველ 30 წამში.` : "ამ კვირის მატჩაფები ლაივ ანგარიშით"}>
-        <div className="flex flex-wrap items-center gap-3">
+      <PageHeader title="Live მატჩაფები" description={data ? `კვირა ${data.period}. ანგარიში თავისით ახლდება ყოველ 30 წამში.` : "ამ კვირის მატჩაფები ლაივ ანგარიშით"}>
+        <div className="flex items-center gap-3">
           {data && <Updated at={data.updated} />}
           {anyLive && (
             <Badge variant="destructive" className="gap-1.5">
               <Radio className="h-3 w-3 animate-pulse motion-reduce:animate-none" /> LIVE
             </Badge>
           )}
-          <Button variant="outline" size="sm" onClick={reload} className="bg-transparent">
-            <RefreshCw /> განახლება
+          <Button variant="outline" size="icon" onClick={reload} className="h-8 w-8 rounded-full bg-transparent" aria-label="განახლება">
+            <RefreshCw className="h-3.5 w-3.5" />
           </Button>
         </div>
       </PageHeader>
@@ -323,8 +391,12 @@ export default function Live() {
           )}
           <LiveNow data={data} />
           <WeekPlanner data={data} />
-          <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-            {data.matchups.map((m, i) => (
+          <div className="mb-3 mt-6 flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold">მატჩაფები</h2>
+            <span className="hidden text-xs text-muted-foreground sm:inline">დააჭირე მატჩს მოთამაშეებისთვის</span>
+          </div>
+          <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-2">
+            {matchups.map((m, i) => (
               <Matchup
                 // დამალულები დაბრუნებისას თავიდან "შემოდიან" (pass-in ანიმაცია)
                 key={focus === i ? i : `${i}-${focus === null}`}
@@ -335,6 +407,7 @@ export default function Live() {
                 isPoints={data.is_points}
                 open={focus === i}
                 onToggle={() => setFocus(focus === i ? null : i)}
+                mine={isMine(m)}
                 className={cn(focus !== null && focus !== i && "hidden", focus === null && "pass-in")}
               />
             ))}

@@ -12,6 +12,7 @@ import live_feed
 import projections as PJ
 import trades as trades_mod
 import activity as activity_mod
+import standings as standings_mod
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -41,6 +42,8 @@ def build():
                       for t in sorted(league.teams, key=lambda t: (t.standing or 99, -t.wins))],
         "draft": _draft_info(league),
         "schedule": _schedule(S.get(cur_y)),
+        # ESPN-ის Standings გვერდის სრული ცხრილი + სეზონის სტატისტიკა
+        "table": standings_mod.build(league),
     }
 
     # ჩემპიონები

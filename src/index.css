@@ -59,21 +59,13 @@
 
 @layer components {
   /* ბარათი ფერადი მარკერით: ზედაპირი ნეიტრალურია, ფერი მხოლოდ ზემოთ პატარა ზოლად (--tone) */
+  /* ძველი ფერადი ბარათები: ახლა ყველა ერთ, სუფთა სტილშია (--tone აღარ ჩანს) */
   .tone-card {
     position: relative;
     overflow: hidden;
+    border-radius: 1rem;
     border-color: rgb(255 255 255 / 0.08);
     background: hsl(var(--card));
-  }
-  .tone-card::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 1.25rem;
-    width: 1.75rem;
-    height: 2px;
-    border-radius: 0 0 2px 2px;
-    background: hsl(var(--tone));
   }
   .lift {
     transition: border-color 0.2s ease;

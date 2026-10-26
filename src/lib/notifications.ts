@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import type { Announcement, LeagueData } from "@/types";
+import type { LeagueData } from "@/types";
 import { clean } from "@/lib/format";
 
 /** შეტყობინებების ლენტი. წყაროები:
  *  - ESPN-ის აქტივობა (აყვანა, გაშვება, ტრეიდი) — ზუსტი დროით, სერვერიდან;
  *  - ტრავმის სტატუსის ცვლილება და კვირის შედეგები — ESPN დროს არ გვაძლევს, ამიტომ
- *    ბრაუზერი იმახსოვრებს, რა იყო ბოლოს, და ცვლილებას იმ წამს აფიქსირებს, როცა შეამჩნია;
- *  - ლიგის განცხადებები. */
+ *    ბრაუზერი იმახსოვრებს, რა იყო ბოლოს, და ცვლილებას იმ წამს აფიქსირებს, როცა შეამჩნია. */
 export type NoteKind = "add" | "waiver" | "drop" | "trade" | "trade_review" | "injury" | "healthy" | "week" | "news";
 
 export interface Note {
@@ -16,6 +15,9 @@ export interface Note {
   title: string;
   body?: string;
   to?: string;
+  /** ვის ეხება: მოთამაშის ფოტო ან გუნდების ლოგოები */
+  pid?: number;
+  teams?: string[];
 }
 
 const SEEN_KEY = "wcf-notes-seen";
@@ -40,37 +42,6 @@ const write = (k: string, v: unknown) => {
 
 const status = (s: string) => s.replace(/_/g, " ");
 const names = (list: { name: string }[]) => list.map((p) => p.name).join(", ");
-
-/** განცხადებები: ერთი მოთხოვნა ყველა ზარისთვის (ზარი ორჯერაა გვერდზე: ტელეფონი და კომპიუტერი) */
-let annCache: { at: number; items: Announcement[] } | null = null;
-let annPending: Promise<Announcement[]> | null = null;
-function loadAnnouncements(): Promise<Announcement[]> {
-  if (annCache && Date.now() - annCache.at < 55_000) return Promise.resolve(annCache.items);
-  annPending ??= fetch("/api/announcements", { headers: { accept: "application/json" } })
-    .then((r) => (r.ok ? r.json() : { items: [] }))
-    .then((d) => {
-      annCache = { at: Date.now(), items: d.items ?? [] };
-      return annCache.items;
-    })
-    .catch(() => annCache?.items ?? [])
-    .finally(() => (annPending = null));
-  return annPending;
-}
-
-function useAnnouncements() {
-  const [items, setItems] = useState<Announcement[]>(annCache?.items ?? []);
-  useEffect(() => {
-    let alive = true;
-    const load = () => loadAnnouncements().then((x) => alive && setItems(x));
-    load();
-    const id = window.setInterval(() => document.visibilityState === "visible" && load(), 60_000);
-    return () => {
-      alive = false;
-      window.clearInterval(id);
-    };
-  }, []);
-  return items;
-}
 
 type Snapshot = { injuries: Record<string, string>; weeks: number[] };
 
@@ -99,6 +70,7 @@ function detectChanges(data: LeagueData): Note[] {
           title: `${owner[pid].name}: ${status(s)}`,
           body: snap.injuries[pid] ? `${owner[pid].team}. ადრე: ${status(snap.injuries[pid])}` : owner[pid].team,
           to: `/player/${pid}`,
+          pid: Number(pid),
         });
     for (const [pid, s] of Object.entries(snap.injuries))
       if (!injuries[pid] && owner[pid])
@@ -109,6 +81,7 @@ function detectChanges(data: LeagueData): Note[] {
           title: `${owner[pid].name} დაბრუნდა`,
           body: `${owner[pid].team}. ადრე: ${status(s)}`,
           to: `/player/${pid}`,
+          pid: Number(pid),
         });
   }
 
@@ -137,7 +110,6 @@ function detectChanges(data: LeagueData): Note[] {
 }
 
 export function useNotifications(data?: LeagueData) {
-  const announcements = useAnnouncements();
   const [seen, setSeen] = useState(() => read<string>(SEEN_KEY, ""));
   const [local, setLocal] = useState<Note[]>(() => read<Note[]>(LOCAL_KEY, []));
 
@@ -158,6 +130,7 @@ export function useNotifications(data?: LeagueData) {
           title: a.kind === "trade" ? `ტრეიდი: ${clean(x.team)} ↔ ${clean(y.team)}` : `ტრეიდი განხილვაშია: ${clean(x.team)} ↔ ${clean(y.team)}`,
           body: `${clean(x.team)} გასცა ${names(x.gives)}, ${clean(y.team)} გასცა ${names(y.gives)}`,
           to: "/trades",
+          teams: [x.team, y.team],
         });
       } else {
         const team = clean(a.team ?? "");
@@ -170,17 +143,14 @@ export function useNotifications(data?: LeagueData) {
           title: added.length ? `${team} აიყვანა ${names(added)}` : `${team} გაუშვა ${names(dropped)}`,
           body: added.length && dropped.length ? `გაუშვა ${names(dropped)}` : a.kind === "waiver" ? "waiver-იდან" : undefined,
           to: added[0] ? `/player/${added[0].pid}` : a.tid != null ? `/team/${a.tid}` : undefined,
+          pid: (added[0] ?? dropped[0])?.pid,
+          teams: a.team ? [a.team] : undefined,
         });
       }
     }
-    for (const a of announcements.slice(0, 10)) {
-      const at = a.created ?? a.date;
-      if (!at || a.auto) continue;
-      out.push({ id: `ann-${a.id ?? a.title}`, kind: "news", at, title: a.title, body: a.text?.slice(0, 120), to: "/announcements" });
-    }
     const unique = new Map(out.map((n) => [n.id, n]));
     return [...unique.values()].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 50);
-  }, [local, data?.activity, announcements]);
+  }, [local, data?.activity]);
 
   // პირველ გახსნაზე ყველაფერი ძველი წაკითხულია, ახლიდან ითვლება
   useEffect(() => {

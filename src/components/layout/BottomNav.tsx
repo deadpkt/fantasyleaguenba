@@ -2,8 +2,8 @@ import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { SECTIONS, sectionOf } from "@/components/layout/SiteHeader";
 
-/** ტელეფონზე ქვედა მენიუ, როგორც აპებში: 5 მთავარი ჯგუფი. განცხადებები ზედა მენიუში და ზარშია. */
-const TABS = SECTIONS.filter((s) => s.label !== "განცხადებები");
+/** ტელეფონზე ქვედა მენიუ, როგორც აპებში: საიტის მთავარი ჯგუფები */
+const TABS = SECTIONS;
 
 export default function BottomNav() {
   const { pathname } = useLocation();
